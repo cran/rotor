@@ -1,3 +1,17 @@
+# rotor 0.2.2
+
+* Reordered the arguments of `rotate_*()` and `backup_*()` for more consistency 
+* default `size` for all all `rotate_*()` and `backup_*()` functions is now
+  `1` (Byte). This means empty files are never rotated by default.
+* support for `Inf` `size` and `age`
+* More robust regex for discovering backups of files
+* R6 API: BackupQueue subclasses gain a `should_rotate(...)` method that 
+  determines whether rotation/backup should take place. 
+* R6 API: BackupQueueDate and BackupQueueDateTime now have a caching mechanism 
+  for backups (defaults to `FALSE`). 
+* R6 API: BackupQueue* now use setters/getters for all fields. 
+
+
 # rotor 0.2.1 (2019-05-15)
 
 * added examples to `rotate()` documentation

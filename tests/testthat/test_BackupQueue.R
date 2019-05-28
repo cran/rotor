@@ -1,25 +1,28 @@
 context("BackupQueue")
 
-dr <- tempdir()
-td <- file.path(dr, "rotor")
+td <- file.path(tempdir(), "rotor")
 dir.create(td, recursive = TRUE)
 
 teardown({
   unlink(td, recursive = TRUE)
-  if (!length(list.files(dr))) unlink(dr, recursive = TRUE)
 })
 
 
 
+# BackupQueue -------------------------------------------------------------
 
 test_that("get_backups works as expected", {
-  tf <- file.path(td, "test")
-  file.create(tf)
+  expect_identical(
+    get_backups("foo.txt", c("foo.1.txt", "bar"), sfx_patterns = "\\d{1}"),
+    "foo.1.txt"
+  )
+
 
   expect_identical(
     get_backups("foo.txt", c("foo.1.txt", "bar"), sfx_patterns = "\\d{1}"),
     "foo.1.txt"
   )
+
 
   expect_path_equal(
     get_backups("foo.txt", c("path/to/foo.1.txt", "path/to/bar"), sfx_patterns = "\\d{1}"),
@@ -29,13 +32,69 @@ test_that("get_backups works as expected", {
   expect_error(
     get_backups("foo.txt", c("path/to/foo.1.txt", "path/bar"), sfx_patterns = "\\d{1}")
   )
+
+
+  expect_setequal(
+    get_backups(
+      "foo.txt",
+      c("foo.1.txt", "foo.1.txt.zip", "foo.1.txt.tar.gz", "foo.1.txt.7z", "foo.7z"),
+      sfx_patterns = "\\d+"
+    ),
+    c("foo.1.txt", "foo.1.txt.zip", "foo.1.txt.tar.gz", "foo.1.txt.7z")
+  )
+
+
+  expect_setequal(
+    get_backups(
+      "foo",
+      c("foo.1", "foo.1.zip", "foo.1.tar.gz", "foo.1.7z", "foo.7z"),
+      sfx_patterns = "\\d+"
+    ),
+    c("foo.1", "foo.1.zip", "foo.1.tar.gz", "foo.1.7z")
+  )
+
+
+  sfx_real <- c(
+    "\\d+",
+    "\\d{4}-\\d{2}-\\d{2}",
+    "\\d{4}-\\d{2}-\\d{2}(-*|",
+    "\\d{4}-\\d{2}"
+  )
+
+
+
+  expect_length(
+    get_backups("test.jsonl", "test.7z", sfx_patterns = sfx_real), 0
+  )
+
+
+  bus <- c(
+    "test.1.log.zip", "test.2.log.tar.gz", "test.2019-01-01T22-22-22.log.zip",
+    "test.2019-02-01--00-00-00.log", "test.2019-03-01--00-00-00.log.zip",
+    "test.3.log"
+  )
+
+  bad_bus <- c(
+    "test.log.zip", "test.7z", "test.2019-01-01X22-22-22.log.zip", "test.2019-01-01T22-22-222.log.zip"
+  )
+
+  bus     <- file.path("fake","path", bus)
+  bad_bus <- file.path("fake","path", bad_bus)
+
+  expect_identical(
+    get_backups("foo/bar/test.log", c(bus, bad_bus), sfx_real),
+    sort(bus)
+  )
 })
+
+
 
 
 
 test_that("BackupQueue works as expected", {
   tf <- file.path(td, "test")
   file.create(tf)
+  expect_identical(n_backups(tf), 0L)
 
   bq <- BackupQueue$new(tf)
   expect_path_equal(bq$file, tf)
@@ -49,6 +108,7 @@ test_that("BackupQueue works as expected", {
 test_that("BackupQueue finding backups works as expected for files with extension", {
   tf <- file.path(td, "test.log")
   file.create(tf)
+  expect_identical(n_backups(tf), 0L)
   bq <- BackupQueue$new(tf)
 
   sfxs <-c(1:12, "2019-12-31")
@@ -63,9 +123,12 @@ test_that("BackupQueue finding backups works as expected for files with extensio
 
 
 
+
 test_that("BackupQueue finding backups works as expected for files without extension", {
   tf <- file.path(td, "test")
   file.create(tf)
+  on.exit(unlink(bus))
+  expect_identical(n_backups(tf), 0L)
   bq <- BackupQueue$new(tf)
 
   sfxs <-c(1:12, "2019-12-31")
@@ -83,6 +146,7 @@ test_that("BackupQueue finding backups works as expected for files without exten
 test_that("dryrun/verbose prune", {
   tf <- file.path(td, "test")
   file.create(tf)
+  expect_identical(n_backups(tf), 0L)
   bq <- BackupQueue$new(tf)
 
   sfxs <-c(1:12, "2019-12-31")
@@ -143,4 +207,915 @@ test_that("filenames_as_matrix works as expected with paths", {
   expect_identical(res[, "name"], rep("blah", 3))
   expect_identical(res[, "ext"], c("txt", "txt", "txt.tar.gz"))
   expect_identical(res[, "sfx"], c("1",  "2019-12-31", "2019-12-31--01-01-01"))
+})
+
+
+
+
+test_that("$print() does not fail", {
+  tf <- file.path(td, "test")
+  file.create(tf)
+  on.exit(file.remove(tf))
+  bq <- BackupQueue$new(tf)
+
+  # printing empty bq succeedes
+  expect_output(print(bq))
+
+  # printing nonempty bq succeedes
+  sfxs <-c(1:12, "2019-12-31")
+  bus <- paste0(tools::file_path_sans_ext(tf), ".", sfxs)
+  file.create(bus)
+  on.exit(file.remove(bus), add = TRUE)
+  expect_output(print(bq))
+})
+
+
+
+
+# BackupQueueIndex --------------------------------------------------------
+context("BackupQueueIndex")
+
+test_that("BackupQueueIndex can find and prune backup trails", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bt <- BackupQueueIndex$new(tf)
+
+  # finding and pruning backups works
+  expect_identical(bt$n_backups, 0L)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(".1.log.zip", ".2.log.tar.gz", ".3.log"))
+  file.create(bus)
+  expect_path_equal(bt$backups$path, bus)
+
+  # multiple pruning with the same settings does not change anything
+  expect_path_equal(bt$prune(2)$backups$path, bus[1:2])
+  expect_path_equal(bt$prune(2)$backups$path, bus[1:2])
+  expect_path_equal(bt$prune(2)$backups$path, bus[1:2])
+
+  # pruning with higher prune number than number of backups does not change anything
+  expect_path_equal(bt$prune(1)$backups$path, bus[1])
+  expect_path_equal(bt$prune(2)$backups$path, bus[1])
+
+  #cleanup
+  expect_length(bt$prune(0)$backups$path, 0)
+  expect_length(bt$prune(0)$backups$path, 0)
+})
+
+
+
+
+test_that("BackupQueueIndex only shows indexed backups", {
+  tf <- file.path(td, "test.log")
+
+  file.create(c(
+    tf,
+    file.path(td, "test.1.log"),
+    file.path(td, "test.2.log"),
+    file.path(td, "test.2017.log"),
+    file.path(td, "test.201701.log"),
+    file.path(td, "test.20170201.log"),
+    file.path(td, "test.2017-03.log"),
+    file.path(td, "test.2017-04-01.log")
+  ))
+
+  bq <- BackupQueueIndex$new(tf)
+  expect_true(all(bq$backups$sfx == as.integer(bq$backups$sfx)))
+
+  BackupQueue$new(tf)$prune(0)
+  file.remove(tf)
+})
+
+
+
+test_that("BackupQueue pruning works as expected for files without extension", {
+  tf <- file.path(td, "test")
+  file.create(tf)
+  bt <- BackupQueueIndex$new(tf)
+
+  # finding and pruning backups works
+  expect_identical(bt$n_backups, 0L)
+  bus <- paste0(tf, c(".1", ".2", ".3"))
+  file.create(bus)
+  expect_path_equal(bt$backups$path, bus)
+  bt$prune(2)
+  expect_path_equal(bt$backups$path, bus[1:2])
+  bt$prune(2)
+  expect_path_equal(bt$backups$path, bus[1:2])
+  expect_length(bt$prune(0)$backups$path, 0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("BackupQueue works as expected for files with extension", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  expect_identical(n_backups(tf), 0L)
+  bt <- BackupQueueIndex$new(tf)
+
+  # finding and pruning backups works
+  expect_identical(bt$n_backups, 0L)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(".1.log", ".2.log", ".3.log"))
+  file.create(bus)
+  expect_path_equal(bt$backups$path, bus)
+  bt$prune(2)
+  expect_path_equal(bt$backups$path, bus[1:2])
+  expect_length(bt$prune(0)$backups$path, 0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("BackupQueue$pad_index works as expected", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  expect_identical(n_backups(tf), 0L)
+  bus <- paste0(tools::file_path_sans_ext(tf), ".", 1:12, ".log")
+  padded_bus <- sort(paste0(
+    tools::file_path_sans_ext(tf), ".", pad_left(1:12, pad = 0), ".log"
+  ))
+  file.create(bus)
+
+  bt <- BackupQueueIndex$new(tf)
+  expect_path_setequal(bt$backups$path, bus)
+  expect_path_setequal(bt$pad_index()$backups$path, padded_bus)
+  expect_path_setequal(bt$prune(9)$backups$path, bus[1:9])
+
+  expect_length(bt$prune(0)$backups$path, 0)
+  file.remove(tf)
+})
+
+
+
+test_that("BackupQueue$increment_index works as expected", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  expect_identical(n_backups(tf), 0L)
+  bus <- paste0(tools::file_path_sans_ext(tf), ".", 1:9, ".log")
+  pushed_bus <- paste0(tools::file_path_sans_ext(tf), ".", pad_left(2:10, pad = "0"), ".log")
+  file.create(bus)
+
+  bt <- BackupQueueIndex$new(tf)
+  expect_path_setequal(bt$backups$path, bus)
+  expect_path_equal(bt$increment_index()$backups$path, pushed_bus)
+
+  expect_length(bt$prune(0)$backups$path, 0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("BackupQueue$push_backup() works as expected", {
+  if (!is_zipcmd_available())
+    skip("Test requires a workings system zip command")
+
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  expect_identical(n_backups(tf), 0L)
+  bus <- paste0(tools::file_path_sans_ext(tf), ".", 1:9, ".log")
+  padded_bus <- sort(paste0(
+    tools::file_path_sans_ext(tf), ".", pad_left(1:10, pad = 0), ".log"
+  ))
+  file.create(bus)
+
+  bt <- BackupQueueIndex$new(tf)
+  bt$push_backup()
+  expect_length(bt$backups$path, 10)
+
+  bt$set_compression(TRUE)
+  bt$push_backup()
+  expect_length(bt$backups$path, 11)
+  expect_identical(tools::file_ext(bt$backups$path[[1]]), "zip")
+  expect_setequal(tools::file_ext(bt$backups$path[2:11]), "log")
+
+  expect_length(bt$prune(0)$backups$path, 0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("BackupQueueIndex$push_backup() can push to different directory", {
+  if (!is_zipcmd_available())
+    skip("Test requires a workings system zip command")
+
+  tf <- file.path(td, "test.log")
+  bu_dir <- file.path(td, "backups")
+  dir.create(bu_dir)
+  file.create(tf)
+  expect_identical(n_backups(tf), 0L)
+  on.exit(unlink(c(bu_dir, tf), recursive = TRUE))
+
+
+  bt <- BackupQueueIndex$new(tf, backup_dir = bu_dir)
+  bt$push_backup()
+
+  expect_match(bt$backups$dir, "rotor.backups")
+  bt$set_compression(TRUE)
+  bt$push_backup()
+
+  expect_identical(bt$n_backups, 2L)
+
+  expect_length(bt$prune(0)$backups$path, 0)
+  expect_length(list.files(bu_dir), 0)
+})
+
+
+
+
+test_that("BackupQueueIndex dry run doesnt modify file system", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  expect_identical(n_backups(tf), 0L)
+  bt <- BackupQueueIndex$new(tf)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(".1.log.zip", ".2.log.tar.gz", ".3.log"))
+  file.create(bus)
+
+  DRY_RUN$activate()
+  on.exit({
+    unlink(tf)
+    unlink(bus)
+    DRY_RUN$deactivate()
+  })
+
+  snap <- utils::fileSnapshot(td, md5sum = TRUE)
+
+  expect_message(bt$increment_index(92), "93")
+  expect_snapshot_unchanged(snap)
+
+  expect_silent(bt$pad_index())
+  expect_snapshot_unchanged(snap)
+
+  expect_message(bt$push_backup(), "test.log -> test.1.log")
+  expect_snapshot_unchanged(snap)
+
+  expect_message(bt$prune(0), "test.01.log")
+  expect_snapshot_unchanged(snap)
+})
+
+
+
+
+test_that("BackupQueueIndex: $should_rotate", {
+  tf <- file.path(td, "test.log")
+  saveRDS(iris, tf)
+  expect_identical(n_backups(tf), 0L)
+  on.exit(file.remove(tf))
+
+  bq <- BackupQueueIndex$new(tf)
+  expect_false(bq$should_rotate("1gb"))
+  expect_true(bq$should_rotate("0.5kb"))
+})
+
+
+# BackupQueueDatetime -----------------------------------------------------
+context("BackupQueueDateTime")
+
+
+
+
+test_that("BackupQueueDatetime: backups_cache", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  on.exit(unlink(tf))
+  expect_identical(n_backups(tf), 0L)
+  bq <- BackupQueueDateTime$new(tf, cache_backups = TRUE)
+  file.create(paste0(tools::file_path_sans_ext(tf), ".2019-01-01T22-22-22.log.zip"))
+
+
+  # last rotation cache must be updated manually
+  expect_null(bq$last_rotation)
+  bq$update_backups_cache()
+  expect_equal(bq$last_rotation, parse_datetime("2019-01-01T22-22-22"))
+
+  # last rotation cache is set on creation
+  bq <- BackupQueueDateTime$new(tf, cache_backups = TRUE)
+  expect_equal(bq$last_rotation, parse_datetime("2019-01-01T22-22-22"))
+
+  # last rotation cache is updated on backup push
+  bq <- BackupQueueDateTime$new(tf, cache_backups = TRUE)
+  bq$push_backup(now = "2019-02-01--00-00-00")
+  expect_equal(bq$last_rotation, parse_datetime("2019-02-01--00-00-00"))
+
+  # last rotation cache is set on creation
+  bq <- BackupQueueDateTime$new(tf, cache_backups = FALSE)
+  file.create(paste0(tools::file_path_sans_ext(tf), ".2019-03-01--00-00-00.log.zip"))
+  expect_equal(bq$last_rotation, parse_datetime("2019-03-01--00-00-00"))
+
+  expect_equal(bq$n_backups, 3)
+  bq <- BackupQueueDateTime$new(tf, cache_backups = TRUE)
+  bq$prune(0)
+  expect_null(bq$last_rotation)
+})
+
+
+
+
+test_that("BackupQueueDateTime can find and prune backup trails", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(".2019-01-01T22-22-22.log.zip", ".20190102---1212.log.tar.gz", ".20190103174919.log", ".12.log"))
+  file.create(bus)
+  bq <- BackupQueueDateTime$new(tf)
+
+  expect_identical(
+    bq$backups$timestamp,
+    as.POSIXct(c("2019-01-03 17:49:19", "2019-01-02 12:12:00", "2019-01-01 22:22:22"))
+  )
+
+  # backup_matrix stays a matrix even if it has only one row
+  bq$prune(1)
+  expect_identical(bq$n_backups, 1L)
+
+  bq <- BackupQueue$new(tf)
+  bq$prune(0)
+  bq$prune(0)
+  expect_identical(bq$n_backups, 0L)
+  file.remove(tf)
+})
+
+
+
+
+test_that("BackupQueueDatetime works with supported timestamp formats", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  datetime <- as.POSIXct("2019-01-01 00:00:00")
+
+  bq <- BackupQueueDateTime$new(tf)
+  expect_identical(bq$n_backups, 0L)
+  for (i in 1:10) {
+    bq$push_backup(now = datetime + i * 5)
+  }
+  bq$prune(5)
+  expect_length(bq$backups$path, 5)
+
+  file.create(file.path(td, "test.2019-02-20.log"))
+  file.create(file.path(td, "test.2019-04-20T12-00-00.log"))
+  file.create(file.path(td, "test.2019-04-20T120000.log"))
+  file.create(file.path(td, "test.2019-04-20T1200.log"))
+  file.create(file.path(td, "test.2019-04-20--12.log"))
+  file.create(file.path(td, "test.20190420T12.log"))
+  bq$update_backups_cache()
+
+  bq$prune(7)
+
+  eres <- c(
+    "2019-04-20 12:00:00", "2019-04-20 12:00:00", "2019-04-20 12:00:00",
+    "2019-04-20 12:00:00", "2019-04-20 12:00:00", "2019-02-20 00:00:00",
+    "2019-01-01 00:00:50"
+  )
+
+  expect_identical(
+    as.character(bq$backups$timestamp),
+    eres
+  )
+
+  bq$backups$timestamp
+  noback <- file.path(dirname(tf), ".2019-a2-20.log")
+  file.create(noback)
+  on.exit(file.remove(noback))
+
+  expect_identical(
+    as.character(bq$backups$timestamp),
+    eres
+  )
+
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+test_that("Prune BackupQueueDate based on date", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(
+    ".2019-01-01.log.zip",
+    ".2019-01-02--12-12-12.log.tar.gz",
+    ".2019-01-03.log",
+    ".2020-01-03.log"
+  ))
+  file.create(bus)
+
+  bq <- BackupQueueDateTime$new(tf)
+  bq$prune(as.Date("2019-01-02"))
+
+  expect_identical(
+    basename(bq$backups$path),
+    c(
+      "test.2020-01-03.log",
+      "test.2019-01-03.log",
+      "test.2019-01-02--12-12-12.log.tar.gz"
+    )
+  )
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("Prune BackupQueueDate based on year interval", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(
+    ".2019-01-01--12-12-12.log.zip",
+    ".2019-02-02--12-12-12.log.tar.gz",
+    ".2019-03-03--12-12-12.log",
+    ".2020-01-03--12-12-12.log",
+    ".2021-01-03--12-12-12.log",
+    ".2022-01-03--12-12-12.log"
+  ))
+  file.create(bus)
+  bq <- BackupQueueDateTime$new(tf)
+
+  bq$prune("2 years")
+  expect_identical(
+    basename(bq$backups$path),
+    c(
+      "test.2022-01-03--12-12-12.log",
+      "test.2021-01-03--12-12-12.log"
+    )
+  )
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("Prune BackupQueueDate based on month interval", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(
+    ".2019-01-01--00-00-00.log.zip",
+    ".2019-02-02--00-00-00.log.tar.gz",
+    ".2019-03-03--00-00-00.log",
+    ".2019-04-03--00-00-00.log"
+  ))
+  file.create(bus)
+
+  bq <- BackupQueueDateTime$new(tf)
+  bq$prune("2 months")
+  expect_identical(
+    basename(bq$backups$path),
+    c(
+      "test.2019-04-03--00-00-00.log",
+      "test.2019-03-03--00-00-00.log"
+    )
+  )
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("Prune BackupQueueDate based on week interval", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(
+    ".2019-04-15--00-00-00.log",
+    ".2019-04-08--00-00-00.log.tar.gz",
+    ".2019-04-07--00-00-00.log.zip"
+  ))
+  file.create(bus)
+
+  bq <- BackupQueueDateTime$new(tf)
+  bq$prune("2 weeks")
+  expect_identical(
+    basename(bq$backups$path),
+    c(
+      "test.2019-04-15--00-00-00.log",
+      "test.2019-04-08--00-00-00.log.tar.gz"
+    )
+  )
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("Prune BackupQueueDate based on days interval", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(
+    ".2019-04-07--00-00-00.log.zip",
+    ".2019-04-08--00-00-00.log.tar.gz",
+    ".2019-04-09--00-00-00.log"
+  ))
+  file.create(bus)
+
+  bq <- BackupQueueDateTime$new(tf)
+  bq$prune("2 days")
+  expect_identical(
+    basename(bq$backups$path),
+    c(
+      "test.2019-04-09--00-00-00.log",
+      "test.2019-04-08--00-00-00.log.tar.gz"
+    )
+  )
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("BackupQueueDate $last_date", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bq <- BackupQueueDateTime$new(tf, cache_backups = FALSE)
+
+  expect_identical(bq$n_backups, 0L)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(".2019-01-01--00-00-00.log.zip", ".2019-01-02--00-00-00.log.tar.gz", ".2019-01-03--00-00-00.log"))
+  file.create(bus)
+  expect_identical(bq$backups$sfx, c("2019-01-03--00-00-00", "2019-01-02--00-00-00", "2019-01-01--00-00-00"))
+  expect_equal(bq$last_rotation, as.POSIXct("2019-01-03--00-00-00"))
+
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("BackupQueueDateTime$push_backup() can push to different directory", {
+  if (!is_zipcmd_available())
+    skip("Test requires a workings system zip command")
+
+  tf <- file.path(td, "test.log")
+  bu_dir <- file.path(td, "backups")
+  dir.create(bu_dir)
+  file.create(tf)
+  on.exit(unlink(c(bu_dir, tf), recursive = TRUE))
+
+
+  bt <- BackupQueueDateTime$new(tf, backup_dir = bu_dir)
+  bt$push_backup()
+
+  expect_match(bt$backups$dir, "rotor.backups")
+  bt$set_compression(TRUE)
+  bt$push_backup()
+
+  expect_identical(bt$n_backups, 2L)
+
+  expect_length(bt$prune(0)$backups$path, 0)
+  expect_length(list.files(bu_dir), 0)
+})
+
+
+
+test_that("BackupQueueDateTime: $should_rotate", {
+  tf <- file.path(td, "test.log")
+  saveRDS(iris, tf)
+  on.exit(file.remove(tf))
+
+  bq <- BackupQueueDateTime$new(tf)
+  bq$push_backup(now = "2019-01-01")
+  on.exit(bq$prune(0), add = TRUE, after = FALSE)
+
+  expect_false(bq$should_rotate("0.5kb", age = "1 year"))
+  expect_true(bq$should_rotate("0.5kb", age = "1 year", now = "2020-01-01"))
+  expect_true(bq$should_rotate("0.5kb", age = "0 year"))
+})
+
+
+# BackupQueueDate ---------------------------------------------------------
+context("BackupQueueDate")
+
+test_that("BackupQueueDate: $set_max_backups", {
+  tf <- file.path(td, "test")
+  file.create(tf)
+  on.exit(unlink(tf))
+
+  bq <- BackupQueueDateTime$new(tf)
+
+  bq$set_max_backups(1)
+  expect_identical(bq$max_backups, 1L)
+
+  bq$set_max_backups("1 day")
+  expect_s3_class(bq$max_backups, "rotation_interval")
+  expect_identical(bq$max_backups$value, 1L)
+  expect_identical(bq$max_backups$unit, "day")
+
+  bq$set_max_backups("2019-01-01")
+  expect_identical(bq$max_backups, as.Date("2019-01-01"))
+
+  bq$set_max_backups(as.Date("2019-01-01"))
+  expect_identical(bq$max_backups, as.Date("2019-01-01"))
+})
+
+
+
+
+test_that("BackupQueueDate can find and prune backup trails", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bq <- BackupQueueDate$new(tf)
+
+  expect_identical(bq$n_backups, 0L)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(".2019-01-01.log.zip", ".2019-01-02.log.tar.gz", ".2019-01-03.log", ".12.log"))
+  file.create(bus)
+  bq$update_backups_cache()
+  expect_identical(bq$backups$sfx, c("2019-01-03", "2019-01-02", "2019-01-01"))
+
+  # backup_matrix stays a matrix even if it has only one row
+  bq$prune(1)
+  expect_identical(bq$n_backups, 1L)
+
+  bq <- BackupQueue$new(tf)
+  bq$prune(0)
+  bq$prune(0)
+  expect_identical(bq$n_backups, 0L)
+  file.remove(tf)
+})
+
+
+
+test_that("BackupQueueDate works with supported datestamp formats", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  date <- as.Date("2019-01-01")
+
+  bq <- BackupQueueDate$new(tf, cache_backups = FALSE)
+  expect_identical(bq$n_backups, 0L)
+  for (i in 1:10) {
+    bq$push_backup(now = as.POSIXct(date + i * 5))
+  }
+  bq$prune(5)
+  expect_length(bq$backups$path, 5)
+
+  file.create(file.path(td, "test.2019-02-20.log"))
+  file.create(file.path(td, "test.2019-04.log"))
+  file.create(file.path(td, "test.2019.log"))
+  file.create(file.path(td, "test.20200411.log"))
+  file.create(file.path(td, "test.201905.log"))
+  bq$prune(5)
+
+  expect_length(bq$backups$path, 5)
+
+  noback <- file.path(dirname(tf), ".2019-a2-20.log")
+  file.create(noback)
+  on.exit(file.remove(noback))
+
+  expect_path_equal(
+    basename(bq$backups$path),
+    c(
+      "test.20200411.log",
+      "test.201905.log",
+      "test.2019-04.log",
+      "test.2019-02-20.log",
+      "test.2019.log"
+    )
+  )
+
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+test_that("Prune BackupQueueDate based on date", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(
+    ".2019-01-01.log.zip",
+    ".2019-01-02.log.tar.gz",
+    ".2019-01-03.log",
+    ".2020-01-03.log"
+  ))
+  file.create(bus)
+  bq <- BackupQueueDate$new(tf)
+  bq$prune(as.Date("2019-01-02"))
+
+  expect_path_equal(
+    basename(bq$backups$path),
+    c(
+      "test.2020-01-03.log",
+      "test.2019-01-03.log",
+      "test.2019-01-02.log.tar.gz"
+    )
+  )
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("Prune BackupQueueDate based on year interval", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(
+    ".2019-01-01.log.zip",
+    ".2019-02-02.log.tar.gz",
+    ".2019-03-03.log",
+    ".2020-01-03.log",
+    ".2021-01-03.log",
+    ".2022-01-03.log"
+  ))
+  file.create(bus)
+
+  bq <- BackupQueueDate$new(tf)
+  bq$prune("2 years")
+  expect_identical(
+    basename(bq$backups$path),
+    c(
+      "test.2022-01-03.log",
+      "test.2021-01-03.log"
+    )
+  )
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("Prune BackupQueueDate based on month interval", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(
+    ".2019-01-01.log.zip",
+    ".2019-02-02.log.tar.gz",
+    ".2019-03-03.log",
+    ".2019-04-03.log"
+  ))
+  file.create(bus)
+
+  bq <- BackupQueueDate$new(tf)
+  bq$prune("2 months")
+  expect_path_equal(
+    basename(bq$backups$path),
+    c(
+      "test.2019-04-03.log",
+      "test.2019-03-03.log"
+    )
+  )
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("Prune BackupQueueDate based on week interval", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(
+    ".2019-04-15.log",
+    ".2019-04-08.log.tar.gz",
+    ".2019-04-07.log.zip"
+  ))
+  file.create(bus)
+
+  bq <- BackupQueueDate$new(tf)
+  bq$prune("2 weeks")
+  expect_path_equal(
+    basename(bq$backups$path),
+    c(
+      "test.2019-04-15.log",
+      "test.2019-04-08.log.tar.gz"
+    )
+  )
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("Prune BackupQueueDate based on dayss interval", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(
+    ".2019-04-07.log.zip",
+    ".2019-04-08.log.tar.gz",
+    ".2019-04-09.log"
+  ))
+  file.create(bus)
+
+  bq <- BackupQueueDate$new(tf)
+  bq$prune("2 days")
+  expect_path_equal(
+    basename(bq$backups$path),
+    c(
+      "test.2019-04-09.log",
+      "test.2019-04-08.log.tar.gz"
+    )
+  )
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("BackupQueueDate $last_rotation", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  bq <- BackupQueueDate$new(tf, cache_backups = FALSE)
+
+  expect_identical(bq$n_backups, 0L)
+  bus <- paste0(tools::file_path_sans_ext(tf), c(".2019-01-01.log.zip", ".2019-01-02.log.tar.gz", ".2019-01-03.log"))
+  file.create(bus)
+  expect_identical(bq$backups$sfx, c("2019-01-03", "2019-01-02", "2019-01-01"))
+
+  expect_equal(bq$last_rotation, as.Date("2019-01-03"))
+
+  bq$prune(0)
+  file.remove(tf)
+})
+
+
+
+
+test_that("BackupQueueDateTime$push_backup() can push to different directory", {
+  if (!is_zipcmd_available())
+    skip("Test requires a workings system zip command")
+
+  tf <- file.path(td, "test.log")
+  bu_dir <- file.path(td, "backups")
+  dir.create(bu_dir)
+  file.create(tf)
+  on.exit(unlink(c(bu_dir, tf), recursive = TRUE))
+
+
+  bt <- BackupQueueDate$new(tf, backup_dir = bu_dir)
+  bt$push_backup()
+
+  expect_match(bt$backups$dir, "rotor.backups")
+  bt$set_compression(TRUE)
+  bt$push_backup()
+
+  expect_identical(bt$n_backups, 2L)
+  expect_length(bt$prune(0)$backups$path, 0)
+  expect_length(list.files(bu_dir), 0)
+})
+
+
+
+
+test_that("BackupQueueDate: $should_rotate", {
+  tf <- file.path(td, "test.log")
+  saveRDS(iris, tf)
+  on.exit(file.remove(tf))
+
+  bq <- BackupQueueDate$new(tf)
+  bq$push_backup(now = "2019-01-01")
+  on.exit(bq$prune(0), add = TRUE, after = FALSE)
+
+  expect_false(bq$should_rotate("0.5kb", age = "1 year"))
+  expect_true(bq$should_rotate("0.5kb", age = "1 year", now = "2020-01-01"))
+  expect_true(bq$should_rotate("0.5kb", age = "0 year"))
+})
+
+
+
+
+test_that("BackupQueueDate: backups_cache", {
+  tf <- file.path(td, "test.log")
+  file.create(tf)
+  on.exit(unlink(tf))
+  bq <- BackupQueueDate$new(tf, cache_backups = TRUE)
+  file.create(paste0(tools::file_path_sans_ext(tf), ".2019-01-01T22-22-22.log.zip"))
+
+  # last rotation cache must be updated manually
+  expect_null(bq$last_rotation)
+  bq$update_backups_cache()
+  expect_equal(bq$last_rotation, parse_date("2019-01-01"))
+
+  # last rotation cache is set on creation
+  bq <- BackupQueueDate$new(tf, cache_backups = TRUE)
+  expect_equal(bq$last_rotation, parse_date("2019-01-01"))
+
+  # last rotation cache is updated on backup push
+  bq <- BackupQueueDate$new(tf, cache_backups = TRUE)
+  bq$push_backup(now = "2019-02-01--00-00-00")
+  expect_equal(bq$last_rotation, parse_date("2019-02-01"))
+
+  # don't cache if set to FALSE
+  bq <- BackupQueueDate$new(tf, cache_backups = FALSE)
+  file.create(paste0(tools::file_path_sans_ext(tf), ".2019-03-01--00-00-00.log.zip"))
+  expect_equal(bq$last_rotation, parse_date("2019-03-01"))
+
+  # last rotation cache is set on prune
+  expect_equal(bq$n_backups, 3)
+  bq <- BackupQueueDate$new(tf, cache_backups = TRUE)
+  bq$prune(0)
+  expect_null(bq$last_rotation)
+})
+
+
+
+
+# cleanup -----------------------------------------------------------------
+
+test_that("BackupQueue: all cleanup succesfull", {
+  expect_length(list.files(td), 0)
 })

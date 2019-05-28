@@ -10,8 +10,8 @@
 \alias{backup_time}
 \title{Rotate or backup files}
 \usage{
-rotate(file, size = 0, max_backups = Inf, compression = FALSE,
-  create_file = TRUE, backup_dir = dirname(file), dry_run = FALSE,
+rotate(file, size = 1, max_backups = Inf, compression = FALSE,
+  backup_dir = dirname(file), create_file = TRUE, dry_run = FALSE,
   verbose = dry_run)
 
 backup(file, size = 0, max_backups = Inf, compression = FALSE,
@@ -20,34 +20,36 @@ backup(file, size = 0, max_backups = Inf, compression = FALSE,
 prune_backups(file, max_backups, backup_dir = dirname(file),
   dry_run = FALSE, verbose = dry_run)
 
-rotate_date(file, age = NULL, format = "\%Y-\%m-\%d", size = 1,
-  max_backups = Inf, compression = FALSE, overwrite = FALSE,
-  create_file = TRUE, backup_dir = dirname(file), now = Sys.Date(),
+rotate_date(file, age = 1, size = 1, max_backups = Inf,
+  compression = FALSE, format = "\%Y-\%m-\%d",
+  backup_dir = dirname(file), overwrite = FALSE, create_file = TRUE,
+  now = Sys.Date(), dry_run = FALSE, verbose = dry_run)
+
+backup_date(file, age = 1, size = 1, max_backups = Inf,
+  compression = FALSE, format = "\%Y-\%m-\%d",
+  backup_dir = dirname(file), overwrite = FALSE, now = Sys.Date(),
   dry_run = FALSE, verbose = dry_run)
 
-backup_date(file, age = NULL, format = "\%Y-\%m-\%d", size = 1,
-  max_backups = Inf, compression = FALSE, overwrite = FALSE,
-  backup_dir = dirname(file), now = Sys.Date(), dry_run = FALSE,
-  verbose = dry_run)
-
-rotate_time(file, age = NULL, format = "\%Y-\%m-\%d--\%H-\%M-\%S",
-  size = 1, max_backups = Inf, compression = FALSE,
-  overwrite = FALSE, create_file = TRUE, backup_dir = dirname(file),
+rotate_time(file, age = -1, size = 1, max_backups = Inf,
+  compression = FALSE, format = "\%Y-\%m-\%d--\%H-\%M-\%S",
+  backup_dir = dirname(file), overwrite = FALSE, create_file = TRUE,
   now = Sys.time(), dry_run = FALSE, verbose = dry_run)
 
-backup_time(file, age = NULL, format = "\%Y-\%m-\%d--\%H-\%M-\%S",
-  size = 1, max_backups = Inf, compression = FALSE,
-  overwrite = FALSE, backup_dir = dirname(file), now = Sys.time(),
+backup_time(file, age = -1, size = 1, max_backups = Inf,
+  compression = FALSE, format = "\%Y-\%m-\%d--\%H-\%M-\%S",
+  backup_dir = dirname(file), overwrite = FALSE, now = Sys.time(),
   dry_run = FALSE, verbose = dry_run)
 }
 \arguments{
 \item{file}{\code{character} scalar: file to backup/rotate}
 
-\item{size}{scalar \code{integer} or \code{character}. Backup/rotate if \code{file} is
-larger than this size. \code{Integers} are interpreted as
-bytes. You can pass \code{character} vectors that contain a file size suffix
-like \code{1k} (kilobytes), \code{3M} (megabytes), \code{4G} (gigabytes),
-\code{5T`` (terabytes). Instead of these short forms you can also be explicit and use the IEC suffixes }KiB\code{, }MiB\code{, }GiB\code{, }TiB\code{. In Both cases }1\code{kilobyte is}1024\code{bytes, 1}megabyte\code{is}1024` kilobytes, etc... .}
+\item{size}{scalar \code{integer}, \code{character} or \code{Inf}. Backup/rotate only if
+\code{file} is larger than this size. \code{Integers} are interpreted as bytes. You
+can pass \code{character} vectors that contain a file size suffix like \code{1k}
+(kilobytes), \code{3M} (megabytes), \code{4G} (gigabytes), \code{5T} (terabytes). Instead
+of these short forms you can also be explicit and use the IEC suffixes
+\code{KiB}, \code{MiB}, \code{GiB}, \code{TiB}. In Both cases \code{1} kilobyte is \code{1024} bytes, 1
+\code{megabyte} is \code{1024} kilobytes, etc... .}
 
 \item{max_backups}{maximum number of backups to keep
 \itemize{
@@ -75,11 +77,11 @@ see its documentation for details)
 specific zip command
 }}
 
-\item{create_file}{\code{logical} scalar. If \code{TRUE} create an empty file in
-place of \code{file} after rotating.}
-
 \item{backup_dir}{\code{character} scalar. The directory in which the backups
 of \code{file} are stored (defaults to \code{dirname(file)})}
+
+\item{create_file}{\code{logical} scalar. If \code{TRUE} create an empty file in
+place of \code{file} after rotating.}
 
 \item{dry_run}{\code{logical} scalar. If \code{TRUE} no changes are applied to the
 file system (no files are created or deleted)}
@@ -105,7 +107,7 @@ which Date/Datetime formats are supported by rotor.
 \item \code{T} and \code{_} can also be used as separators. For example, the following
 datetime formats are also possible:
 \code{\%Y-\%m-\%d_\%H-\%M-\%S} (Python logging default),
-\code{\%Y\%m\%dT\%H\%M\%S} \href{https://en.wikipedia.org/wiki/ISO_8601}{ISO 8601}
+\code{\%Y\%m\%dT\%H\%M\%S} (\href{https://en.wikipedia.org/wiki/ISO_8601}{ISO 8601})
 \item All datetime components except \code{\%Y} are optional. If you leave out part
 of the timestamp, the first point in time in the period is assumed. For
 example (assuming the current year is 2019) \code{\%Y} is identical to
@@ -117,9 +119,11 @@ example (assuming the current year is 2019) \code{\%Y} is identical to
 \item{overwrite}{\code{logical} scalar. If \code{TRUE} overwrite backups if a backup
 of the same name (usually due to timestamp collision) exists.}
 
-\item{now}{The current \code{Date} or Time (\code{POSIXct}). You can pass a custom
-value here to to override the real system time. This is mainly useful
-for testing purposes.}
+\item{now}{The current \code{Date} or time (\code{POSIXct}) as a scalar. You can pass a
+custom value here to to override the real system time. As a convenience you
+can also pass in \code{character} strings that follow the guidelines outlined
+above for \code{format}, but please note that these differ from the formats
+understood by \code{\link[=as.POSIXct]{as.POSIXct()}} or \code{\link[=as.Date]{as.Date()}}.}
 }
 \value{
 \code{file} as a \code{character} scalar (invisibly)

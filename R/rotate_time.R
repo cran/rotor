@@ -2,14 +2,14 @@
 #' @export
 rotate_time <- function(
   file,
-  age = NULL,
-  format = "%Y-%m-%d--%H-%M-%S",
+  age  = -1,
   size = 1,
   max_backups = Inf,
   compression = FALSE,
+  format = "%Y-%m-%d--%H-%M-%S",
+  backup_dir = dirname(file),
   overwrite = FALSE,
   create_file = TRUE,
-  backup_dir = dirname(file),
   now = Sys.time(),
   dry_run = FALSE,
   verbose = dry_run
@@ -38,13 +38,13 @@ rotate_time <- function(
 #' @export
 backup_time <- function(
   file,
-  age = NULL,
-  format = "%Y-%m-%d--%H-%M-%S",
-  size = 1,
+  age  = -1,
+  size =  1,
   max_backups = Inf,
   compression = FALSE,
-  overwrite = FALSE,
+  format = "%Y-%m-%d--%H-%M-%S",
   backup_dir = dirname(file),
+  overwrite = FALSE,
   now = Sys.time(),
   dry_run = FALSE,
   verbose = dry_run
@@ -85,48 +85,24 @@ rotate_time_internal <- function(
   verbose
 ){
   stopifnot(
-    is_scalar_character(file) && file_exists(file),
-    is.null(age) || is_scalar(age),
-    is_scalar(size),
-    is.infinite(max_backups) || is_n0(max_backups) || is.character(max_backups) || is_Date(max_backups),
-    is_scalar_logical(overwrite),
-    is_scalar_logical(dry_run),
-    is_scalar_logical(verbose),
-    is_scalar_logical(create_file),
-    is_scalar_bool(do_rotate)
+    is_scalar_bool(do_rotate),
+    is_scalar_bool(dry_run),
+    is_scalar_bool(verbose),
+    is_scalar_bool(create_file)
   )
-  assert_valid_date_format(format)
-  assert(!is_dir(file))
 
-  now  <- parse_datetime(now)
-  size <- parse_size(size)
+  assert_pure_BackupQueue(file, backup_dir = backup_dir, warn_only = TRUE)
 
   if (dry_run){
     DRY_RUN$activate()
     on.exit(DRY_RUN$deactivate())
   }
 
+  bq <- BackupQueueDateTime$new(file, fmt = format, backup_dir = backup_dir)
 
-  bq <- BackupQueueDateTime$new(file, format = format, backup_dir = backup_dir)
-
-  # Warn if indexed backups exist
-  if (BackupQueue$new(file, backup_dir = backup_dir)$has_backups){
-    bi <- BackupQueueIndex$new(file, backup_dir = backup_dir)
-    idx_backups <- paste(setdiff(bi$backups$path, bq$backups$path))
-    if (length(idx_backups)){warning(
-      "Backing up by timestamp, but indexed backups exist already:\n",
-      paste("-", setdiff(bi$backups$path, bq$backups$path), collapse = "\n"),
-      call. = FALSE
-    )}
-  }
-
-  if (
-    file.size(file) > size &&
-    is_backup_time_necessary(bq, age, now)
-  ){
+  if (bq$should_rotate(size = size, age = age, now = now)){
     bq$push_backup(
       now = now,
-      compression = compression,
       overwrite = overwrite
     )
   } else {
@@ -157,8 +133,8 @@ is_backup_time_necessary <- function(
     return(TRUE)
 
   if (is_parsable_datetime(age))
-    return(is_backup_older_than_datetime(bq$last_backup, age))
+    return(is_backup_older_than_datetime(bq$last_rotation, age))
 
-  if (is_parsable_interval(age))
-    return(is_backup_older_than_interval(bq$last_backup, age, now))
+  if (is_parsable_rotation_interval(age))
+    return(is_backup_older_than_interval(bq$last_rotation, age, now))
 }

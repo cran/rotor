@@ -1,16 +1,15 @@
-
 #' @rdname rotate
 #' @export
 rotate_date <- function(
   file,
-  age = NULL,
-  format = "%Y-%m-%d",
+  age  = 1,
   size = 1,
   max_backups = Inf,
   compression = FALSE,
+  format = "%Y-%m-%d",
+  backup_dir = dirname(file),
   overwrite = FALSE,
   create_file = TRUE,
-  backup_dir = dirname(file),
   now = Sys.Date(),
   dry_run = FALSE,
   verbose = dry_run
@@ -39,13 +38,13 @@ rotate_date <- function(
 #' @export
 backup_date <- function(
   file,
-  age = NULL,
-  format = "%Y-%m-%d",
+  age  = 1,
   size = 1,
   max_backups = Inf,
   compression = FALSE,
-  overwrite = FALSE,
+  format = "%Y-%m-%d",
   backup_dir = dirname(file),
+  overwrite = FALSE,
   now = Sys.Date(),
   dry_run = FALSE,
   verbose = dry_run
@@ -86,51 +85,30 @@ rotate_date_internal <- function(
   verbose
 ){
   stopifnot(
-    is_scalar_character(file) && file_exists(file),
-    is.null(age) || is_scalar(age),
-    is_scalar(size),
-    is.infinite(max_backups) || is_n0(max_backups) || is.character(max_backups) || is_Date(max_backups),
-    is_scalar_bool(overwrite),
+    is_scalar_bool(do_rotate),
     is_scalar_bool(dry_run),
     is_scalar_bool(verbose),
-    is_scalar_bool(create_file),
-    is_scalar_bool(do_rotate),
-    is_scalar(now)
+    is_scalar_bool(create_file)
   )
-  assert_valid_date_format(format)
-  assert(!is_dir(file))
 
-  now <- parse_date(now)
+  assert_pure_BackupQueue(file, backup_dir = backup_dir, warn_only = TRUE)
 
   if (dry_run){
     DRY_RUN$activate()
     on.exit(DRY_RUN$deactivate())
   }
 
-  size <- parse_size(size)
-
-  bq <- BackupQueueDate$new(file, format = format, backup_dir = backup_dir)
-
-  # Warn if indexed backups exist
-  if (BackupQueue$new(file, backup_dir = backup_dir)$has_backups){
-    bi <- BackupQueueIndex$new(file, backup_dir = backup_dir)
-    idx_backups <- paste(setdiff(bi$backups$path, bq$backups$path))
-    if (length(idx_backups)){warning(
-      "Backing up by timestamp, but indexed backups exist already:\n",
-      paste("-", setdiff(bi$backups$path, bq$backups$path), collapse = "\n"),
-      call. = FALSE
-    )}
-  }
-
+  bq <- BackupQueueDate$new(
+    file,
+    fmt = format,
+    backup_dir = backup_dir,
+    compression = compression
+  )
 
   # backup
-  if (
-    file.size(file) > size &&
-    is_backup_time_necessary(bq, age, now)
-  ){
+  if (bq$should_rotate(size = size, age = age, now = now)){
     bq$push_backup(
       now = now,
-      compression = compression,
       overwrite = overwrite
     )
   } else {

@@ -21,7 +21,7 @@
 #'   * `T` and `_` can also be used as separators. For example, the following
 #'     datetime formats are also possible:
 #'       `%Y-%m-%d_%H-%M-%S` (Python logging default),
-#'       `%Y%m%dT%H%M%S` [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601)
+#'       `%Y%m%dT%H%M%S` ([ISO 8601](https://en.wikipedia.org/wiki/ISO_8601))
 #'   * All datetime components except `%Y` are optional. If you leave out part
 #'     of the timestamp, the first point in time in the period is assumed. For
 #'     example (assuming the current year is 2019) `%Y` is identical to
@@ -29,9 +29,11 @@
 #'   * The timestamps must be lexically sortable, so `"%Y-%m-%d"` is legal,
 #'     `"%m-%d-%Y"` and `%Y-%d` are not.
 #'
-#' @param now The current `Date` or Time (`POSIXct`). You can pass a custom
-#'   value here to to override the real system time. This is mainly useful
-#'   for testing purposes.
+#' @param now The current `Date` or time (`POSIXct`) as a scalar. You can pass a
+#'   custom value here to to override the real system time. As a convenience you
+#'   can also pass in `character` strings that follow the guidelines outlined
+#'   above for `format`, but please note that these differ from the formats
+#'   understood by [as.POSIXct()] or [as.Date()].
 #'
 #' @param max_backups maximum number of backups to keep
 #'   - an `integer` scalar: Maximum number of backups to keep
@@ -43,13 +45,13 @@
 #'   - a `character` scalar representing an Interval in the form
 #'     `"<number> <interval>"` (see below for more info)
 #'
-#' @param size scalar `integer` or `character`. Backup/rotate if `file` is
-#'   larger than this size. `Integers` are interpreted as
-#'   bytes. You can pass `character` vectors that contain a file size suffix
-#'   like `1k` (kilobytes), `3M` (megabytes), `4G` (gigabytes),
-#'   `5T`` (terabytes). Instead of these short forms you can also be explicit
-#'   and use the IEC suffixes `KiB`, `MiB`, `GiB`, `TiB`. In Both cases
-#'   `1` kilobyte is `1024` bytes, 1 `megabyte` is `1024` kilobytes, etc... .
+#' @param size scalar `integer`, `character` or `Inf`. Backup/rotate only if
+#'   `file` is larger than this size. `Integers` are interpreted as bytes. You
+#'   can pass `character` vectors that contain a file size suffix like `1k`
+#'   (kilobytes), `3M` (megabytes), `4G` (gigabytes), `5T` (terabytes). Instead
+#'   of these short forms you can also be explicit and use the IEC suffixes
+#'   `KiB`, `MiB`, `GiB`, `TiB`. In Both cases `1` kilobyte is `1024` bytes, 1
+#'   `megabyte` is `1024` kilobytes, etc... .
 #'
 #' @param backup_dir `character` scalar. The directory in which the backups
 #'   of `file` are stored (defaults to `dirname(file)`)
@@ -171,11 +173,11 @@
 #' file.remove(tf)
 rotate <- function(
   file,
-  size = 0,
+  size = 1,
   max_backups = Inf,
   compression = FALSE,
-  create_file = TRUE,
   backup_dir = dirname(file),
+  create_file = TRUE,
   dry_run = FALSE,
   verbose = dry_run
 ){
@@ -233,11 +235,14 @@ rotate_internal <- function(
   verbose,
   do_rotate
 ){
-  assert(is_scalar_character(file) && file_exists(file))
-  assert(!is_dir(file))
-  assert(is_bool(do_rotate))
+  stopifnot(
+    is_scalar_bool(do_rotate),
+    is_scalar_bool(dry_run),
+    is_scalar_bool(verbose),
+    is_scalar_bool(create_file)
+  )
 
-  size <- parse_size(size)
+  assert_pure_BackupQueue(file, backup_dir = backup_dir, warn_only = TRUE)
 
   if (dry_run){
     DRY_RUN$activate()
@@ -247,11 +252,12 @@ rotate_internal <- function(
   bq <- BackupQueueIndex$new(
     file,
     backup_dir = backup_dir,
-    max_backups = max_backups
+    max_backups = max_backups,
+    compression = compression
   )
 
-  if (file.size(file) > size){
-    bq$push_backup(compression = compression)
+  if (bq$should_rotate(size = size)){
+    bq$push_backup()
   } else {
     do_rotate <- FALSE
   }
@@ -303,65 +309,3 @@ prune_backups <- function(
   invisible(file)
 }
 
-
-
-
-#' @param x `character` scalar (`1k`, `1.5g`) etc
-#' @return a `numeric` scalar (can be `double` or `integer`)
-#' @noRd
-#'
-parse_size <- function(x){
-  assert(is_scalar(x) && !is.na(x))
-
-  if (is_integerish(x)){
-    return(as.integer(x))
-  } else {
-    assert(is.character(x))
-  }
-
-  unit_start <- regexec("[kmgt]", tolower(x))[[1]]
-
-  num  <- trimws(substr(x, 1, unit_start - 1L))
-  unit <- trimws(substr(x, unit_start, nchar(x)))
-  res  <- as.numeric(num) * parse_info_unit(unit)
-
-  assert(is_scalar(res) && !is.na(res) && is_scalar_numeric(res))
-  res
-}
-
-
-
-
-parse_info_unit <- function(x){
-  assert(is_scalar_character(x))
-  x <- tolower(x)
-
-  iec <- c("kib", "mib", "gib", "tib", "kb", "mb", "gb", "tb")
-
-  if (x %in% iec)
-    x <- substr(x, 1, 1)
-
-  valid_units <- c("k", "m", "g", "t")
-
-  assert(
-    x %in% valid_units,
-    "'", x, "' is not one of the following valid file size units: ",
-    paste(c(valid_units, iec), collapse = ", ")
-  )
-
-  res <- switch(
-    tolower(x),
-    k = 2^10,
-    m = 2^20,
-    g = 2^30,
-    t = 2^40,
-    NULL
-  )
-
-  assert(
-    !is.null(res),
-    "Something went wrong when parsing the unit of information. ",
-    "Please file a bug report"
-  )
-  res
-}
