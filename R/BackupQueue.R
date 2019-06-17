@@ -1,4 +1,5 @@
 #' An R6 class for managing backups
+#'
 #' @description
 #' `BackupQueue` & co are part of the [R6][R6::R6] API of **rotor**. They are
 #' used internally by [rotate()] and related functions and are not designed
@@ -251,11 +252,14 @@ BackupQueue <- R6::R6Class(
       }
 
       fname_matrix <- filenames_as_matrix(self$file, backups = backup_files)
-      fname_df     <- as.data.frame(fname_matrix, stringsAsFactors = FALSE)
+      fname_df     <- as.data.frame(
+        fname_matrix[, c("name", "sfx", "ext"), drop = FALSE],
+        stringsAsFactors = FALSE
+      )
       finfo <- file.info(backup_files)
 
       res <- cbind(
-        data.frame(path = row.names(finfo), stringsAsFactors = FALSE),
+        path = data.frame(path = rownames(finfo), stringsAsFactors = FALSE),
         fname_df,
         finfo
       )
@@ -325,17 +329,31 @@ BackupQueueIndex <- R6::R6Class(
     },
 
 
-    should_rotate = function(size){
+    should_rotate = function(size, verbose = FALSE){
       size <- parse_size(size)
 
       # try to avoid costly file.size check
       if (size <= 0)
         return(TRUE)
 
-      if (is.infinite(size))
+      if (is.infinite(size)){
+        if (verbose) message("Not rotating: rotation `size` is infinite")
         return(FALSE)
+      }
 
-      file.size(self$file) > size
+      fsize <- file.size(self$file)
+
+      if (fsize < size){
+        if (verbose){
+          message(sprintf(
+            "Not rotating: size of '%s'(%s) is smaller than %s.",
+            self$file, fmt_bytes(file.size(self$file)), fmt_bytes(size)
+          ))
+        }
+        FALSE
+      } else {
+        TRUE
+      }
     },
 
 
@@ -346,7 +364,7 @@ BackupQueueIndex <- R6::R6Class(
       backups <- self$backups
       backups$sfx_new <- pad_left(backups$index, pad = "0")
       backups$path_new <-
-        paste(file.path(backups$dir, backups$name), backups$sfx_new, backups$ext, sep = ".")
+        paste(file.path(dirname(backups$path), backups$name), backups$sfx_new, backups$ext, sep = ".")
 
       backups$path_new <- gsub("\\.$", "", backups$path_new)
 
@@ -369,7 +387,7 @@ BackupQueueIndex <- R6::R6Class(
       backups <- self$backups
       backups$index <- backups$index + as.integer(n)
       backups$path_new <- paste(
-        file.path(backups$dir, backups$name),
+        file.path(dirname(backups$path), backups$name),
         pad_left(backups$index, pad = "0"),
         backups$ext,
         sep = "."
@@ -536,23 +554,43 @@ BackupQueueDateTime <- R6::R6Class(
       size,
       age,
       now = Sys.time(),
-      last_rotation = self$last_rotation
+      last_rotation = self$last_rotation %||% file.info(self$file)$ctime,
+      verbose = FALSE
     ){
       now  <- parse_datetime(now)
       size <- parse_size(size)
 
       # try to avoid costly file.size check
-      if (is.infinite(size) || is.infinite(age) || file.size(self$file) < size)
-        return(FALSE)
+      if (is.infinite(size) || is.infinite(age) || is.null(last_rotation) || file.size(self$file) < size){
+        if (verbose){
+            reasons <- character()
 
-      if (is.null(self$last_rotation))
+            if (is.infinite(age))
+              reasons[["age"]] <- "rotation `age` is infinite"
+
+            if (is.infinite(size)){
+              reasons[["size"]] <- "rotation `size` is infinite"
+
+            } else if (file.size(self$file) < size) {
+              reasons[["size"]] <- sprintf(
+                "size of '%s'(%s) is smaller than %s.",
+                self$file, fmt_bytes(file.size(self$file)), fmt_bytes(size)
+              )
+            }
+
+          message("Not rotating: ", paste(reasons, collapse = ", "))
+        }
+        return(FALSE)
+      }
+
+      if (is.null(last_rotation))
         return(TRUE)
 
       else if (is_parsable_datetime(age))
-        return(is_backup_older_than_datetime(self$last_rotation, age))
+        return(is_backup_older_than_datetime(last_rotation, age, verbose = verbose))
 
       else if (is_parsable_rotation_interval(age))
-        return(is_backup_older_than_interval(self$last_rotation, age, now))
+        return(is_backup_older_than_interval(last_rotation, age, now, verbose = verbose))
 
       stop("`age` must be a parsable date or datetime")
     },
@@ -808,7 +846,6 @@ get_backups <- function(
 
 EMPTY_BACKUPS <- data.frame(
   path = character(0),
-  dir = character(0),
   name = character(0),
   sfx = character(0),
   ext = character(0),

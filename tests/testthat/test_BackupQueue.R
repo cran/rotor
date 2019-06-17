@@ -412,7 +412,7 @@ test_that("BackupQueueIndex$push_backup() can push to different directory", {
   bt <- BackupQueueIndex$new(tf, backup_dir = bu_dir)
   bt$push_backup()
 
-  expect_match(bt$backups$dir, "rotor.backups")
+  expect_match(dirname(bt$backups$path), "rotor.backups")
   bt$set_compression(TRUE)
   bt$push_backup()
 
@@ -468,6 +468,21 @@ test_that("BackupQueueIndex: $should_rotate", {
   expect_false(bq$should_rotate("1gb"))
   expect_true(bq$should_rotate("0.5kb"))
 })
+
+
+
+
+
+test_that("BackupQueueIndex: $should_rotate(verbose = TRUE) displays helpful messages", {
+  tf <- file.path(td, "test")
+  file.create(tf)
+  on.exit(unlink(tf))
+  bq <- BackupQueueIndex$new(tf)
+
+  expect_message(bq$should_rotate(size = "1 tb", verbose = TRUE), "1 TiB")
+  expect_message(bq$should_rotate(size = Inf, verbose = TRUE), "infinite")
+})
+
 
 
 # BackupQueueDatetime -----------------------------------------------------
@@ -758,7 +773,7 @@ test_that("BackupQueueDateTime$push_backup() can push to different directory", {
   bt <- BackupQueueDateTime$new(tf, backup_dir = bu_dir)
   bt$push_backup()
 
-  expect_match(bt$backups$dir, "rotor.backups")
+  expect_match(dirname(bt$backups$path), "rotor.backups")
   bt$set_compression(TRUE)
   bt$push_backup()
 
@@ -785,8 +800,43 @@ test_that("BackupQueueDateTime: $should_rotate", {
 })
 
 
+
+
+test_that("BackupQueueDateTime: `age` works with no backups", {
+  tf <- file.path(td, "test")
+  file.create(tf)
+  on.exit(unlink(tf))
+
+  now <- as.Date(as.character(file.info(tf)$ctime))
+  bq <- BackupQueueDateTime$new(tf)
+  expect_false(bq$should_rotate(age = "10 day", now = now, size = 0))
+  expect_true(bq$should_rotate(age = "0 day", now = now, size = 0))
+})
+
+
+
+
+
+test_that("BackupQueueDateTime: $should_rotate(verbose = TRUE) displays helpful messages", {
+  tf <- file.path(td, "test")
+  file.create(tf)
+  on.exit(unlink(tf))
+  bq <- BackupQueueDateTime$new(tf)
+
+  expect_message(bq$should_rotate(age = Inf, size = "1 tb", verbose = TRUE), "age.*size")
+  expect_message(bq$should_rotate(age = 1, size = "1 tb", verbose = TRUE), "size")
+  expect_message(bq$should_rotate(age = "9999 years", size = -1, verbose = TRUE), "9999")
+  expect_message(bq$should_rotate(age = "1000-12-31", size = -1, verbose = TRUE), "1000")
+})
+
+
+
+
 # BackupQueueDate ---------------------------------------------------------
 context("BackupQueueDate")
+
+
+
 
 test_that("BackupQueueDate: $set_max_backups", {
   tf <- file.path(td, "test")
@@ -1049,7 +1099,7 @@ test_that("BackupQueueDateTime$push_backup() can push to different directory", {
   bt <- BackupQueueDate$new(tf, backup_dir = bu_dir)
   bt$push_backup()
 
-  expect_match(bt$backups$dir, "rotor.backups")
+  expect_match(dirname(bt$backups$path), "rotor.backups")
   bt$set_compression(TRUE)
   bt$push_backup()
 
@@ -1109,6 +1159,35 @@ test_that("BackupQueueDate: backups_cache", {
   bq <- BackupQueueDate$new(tf, cache_backups = TRUE)
   bq$prune(0)
   expect_null(bq$last_rotation)
+})
+
+
+
+
+test_that("BackupQueueDateTime: `age` works with no backups", {
+  tf <- file.path(td, "test")
+  file.create(tf)
+  on.exit(unlink(tf))
+
+  now <- as.Date(as.character(file.info(tf)$ctime))
+  bq <- BackupQueueDate$new(tf)
+  expect_false(bq$should_rotate(age = "10 day", now = now, size = 0))
+  expect_true(bq$should_rotate(age = "0 day", now = now, size = 0))
+})
+
+
+
+
+test_that("BackupQueueDate: $should_rotate(verbose = TRUE) displays helpful messages", {
+  tf <- file.path(td, "test")
+  file.create(tf)
+  on.exit(unlink(tf))
+  bq <- BackupQueueDate$new(tf)
+
+  expect_message(bq$should_rotate(age = Inf, size = "1 tb", verbose = TRUE), "age.*size")
+  expect_message(bq$should_rotate(age = 1, size = "1 tb", verbose = TRUE), "size")
+  expect_message(bq$should_rotate(age = "9999 years", size = -1, verbose = TRUE), "9999")
+  expect_message(bq$should_rotate(age = "1000-12-31", size = -1, verbose = TRUE), "1000")
 })
 
 
