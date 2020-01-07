@@ -1,6 +1,11 @@
+# rotor 0.2.4
+
+* Fixes unit tests sensitive to year change.
+
+
 # rotor 0.2.3
 
-* Changed default behaviour of `rotate_date()`, `rotate_time()`, etc...: If
+* Changed default behavior of `rotate_date()`, `rotate_time()`, etc...: If
   no backups exist of target file, use the "created" timestamp 
   to determine whether rotation should take place or not. 
 * `verbose == TRUE` now also displays information on why rotation was NOT 

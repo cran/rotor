@@ -83,8 +83,8 @@ backup(tf, compression = TRUE)
 
 # display backups of a file
 list_backups(tf)  
-#> [1] "/tmp/RtmpOyN1LN/rotor/mylogfile.1.log.zip"
-#> [2] "/tmp/RtmpOyN1LN/rotor/mylogfile.2.log"
+#> [1] "/tmp/RtmpTB9vY3/rotor/mylogfile.1.log.zip"
+#> [2] "/tmp/RtmpTB9vY3/rotor/mylogfile.2.log"
 ```
 
 `rotate()` also backs up a file, but replaces the original file with an
@@ -93,9 +93,9 @@ empty one.
 ``` r
 rotate(tf)
 list_backups(tf)
-#> [1] "/tmp/RtmpOyN1LN/rotor/mylogfile.1.log"    
-#> [2] "/tmp/RtmpOyN1LN/rotor/mylogfile.2.log.zip"
-#> [3] "/tmp/RtmpOyN1LN/rotor/mylogfile.3.log"
+#> [1] "/tmp/RtmpTB9vY3/rotor/mylogfile.1.log"    
+#> [2] "/tmp/RtmpTB9vY3/rotor/mylogfile.2.log.zip"
+#> [3] "/tmp/RtmpTB9vY3/rotor/mylogfile.3.log"
 
 # the original file is now empty
 readLines(tf)
@@ -118,10 +118,10 @@ backup(tf, max_backups = 4)
 backup(tf, max_backups = 4)
 
 list_backups(tf)
-#> [1] "/tmp/RtmpOyN1LN/rotor/mylogfile.1.log"    
-#> [2] "/tmp/RtmpOyN1LN/rotor/mylogfile.2.log"    
-#> [3] "/tmp/RtmpOyN1LN/rotor/mylogfile.3.log"    
-#> [4] "/tmp/RtmpOyN1LN/rotor/mylogfile.4.log.zip"
+#> [1] "/tmp/RtmpTB9vY3/rotor/mylogfile.1.log"    
+#> [2] "/tmp/RtmpTB9vY3/rotor/mylogfile.2.log"    
+#> [3] "/tmp/RtmpTB9vY3/rotor/mylogfile.3.log"    
+#> [4] "/tmp/RtmpTB9vY3/rotor/mylogfile.4.log.zip"
 ```
 
 We can also use `prune_backups()` to delete old backups. Other than
@@ -155,29 +155,29 @@ backup_time(tf, format = "%Y%m%dT%H%M%S")  # ISO 8601 compatible
 
 backup_info(tf)
 #>                                                       path      name
-#> 1  /tmp/RtmpOyN1LN/rotor/mylogfile.2019-06-17_09-55-44.log mylogfile
-#> 2 /tmp/RtmpOyN1LN/rotor/mylogfile.2019-06-17--09-55-44.log mylogfile
-#> 5      /tmp/RtmpOyN1LN/rotor/mylogfile.20190617T095544.log mylogfile
-#> 3           /tmp/RtmpOyN1LN/rotor/mylogfile.2019-06-17.log mylogfile
-#> 4              /tmp/RtmpOyN1LN/rotor/mylogfile.2019-06.log mylogfile
+#> 1  /tmp/RtmpTB9vY3/rotor/mylogfile.2020-01-02_10-05-52.log mylogfile
+#> 2 /tmp/RtmpTB9vY3/rotor/mylogfile.2020-01-02--10-05-52.log mylogfile
+#> 5      /tmp/RtmpTB9vY3/rotor/mylogfile.20200102T100552.log mylogfile
+#> 3           /tmp/RtmpTB9vY3/rotor/mylogfile.2020-01-02.log mylogfile
+#> 4              /tmp/RtmpTB9vY3/rotor/mylogfile.2020-01.log mylogfile
 #>                    sfx ext size isdir mode               mtime
-#> 1  2019-06-17_09-55-44 log   26 FALSE  664 2019-06-17 09:55:44
-#> 2 2019-06-17--09-55-44 log   26 FALSE  664 2019-06-17 09:55:44
-#> 5      20190617T095544 log   26 FALSE  664 2019-06-17 09:55:44
-#> 3           2019-06-17 log   26 FALSE  664 2019-06-17 09:55:44
-#> 4              2019-06 log   26 FALSE  664 2019-06-17 09:55:44
+#> 1  2020-01-02_10-05-52 log   26 FALSE  664 2020-01-02 10:05:52
+#> 2 2020-01-02--10-05-52 log   26 FALSE  664 2020-01-02 10:05:52
+#> 5      20200102T100552 log   26 FALSE  664 2020-01-02 10:05:52
+#> 3           2020-01-02 log   26 FALSE  664 2020-01-02 10:05:52
+#> 4              2020-01 log   26 FALSE  664 2020-01-02 10:05:52
 #>                 ctime               atime  uid  gid uname grname
-#> 1 2019-06-17 09:55:44 2019-06-17 09:55:44 1000 1000 hoelk  hoelk
-#> 2 2019-06-17 09:55:44 2019-06-17 09:55:44 1000 1000 hoelk  hoelk
-#> 5 2019-06-17 09:55:44 2019-06-17 09:55:44 1000 1000 hoelk  hoelk
-#> 3 2019-06-17 09:55:44 2019-06-17 09:55:44 1000 1000 hoelk  hoelk
-#> 4 2019-06-17 09:55:44 2019-06-17 09:55:44 1000 1000 hoelk  hoelk
+#> 1 2020-01-02 10:05:52 2020-01-02 10:05:52 1032 1032 fleck  fleck
+#> 2 2020-01-02 10:05:52 2020-01-02 10:05:52 1032 1032 fleck  fleck
+#> 5 2020-01-02 10:05:52 2020-01-02 10:05:52 1032 1032 fleck  fleck
+#> 3 2020-01-02 10:05:52 2020-01-02 10:05:52 1032 1032 fleck  fleck
+#> 4 2020-01-02 10:05:52 2020-01-02 10:05:52 1032 1032 fleck  fleck
 #>             timestamp
-#> 1 2019-06-17 09:55:44
-#> 2 2019-06-17 09:55:44
-#> 5 2019-06-17 09:55:44
-#> 3 2019-06-17 00:00:00
-#> 4 2019-06-01 00:00:00
+#> 1 2020-01-02 10:05:52
+#> 2 2020-01-02 10:05:52
+#> 5 2020-01-02 10:05:52
+#> 3 2020-01-02 00:00:00
+#> 4 2020-01-01 00:00:00
 ```
 
 If we examine the “timestamp” column in the example above, we see that
