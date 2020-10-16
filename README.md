@@ -6,7 +6,7 @@
 <!-- badges: start -->
 
 [![Travis build
-status](https://travis-ci.org/s-fleck/rotor.svg?branch=master)](https://travis-ci.org/s-fleck/rotor)
+status](https://travis-ci.com/s-fleck/rotor.svg?branch=master)](https://travis-ci.com/s-fleck/rotor)
 [![Lifecycle:
 maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
 [![Codecov test
@@ -83,8 +83,8 @@ backup(tf, compression = TRUE)
 
 # display backups of a file
 list_backups(tf)  
-#> [1] "/tmp/RtmpTB9vY3/rotor/mylogfile.1.log.zip"
-#> [2] "/tmp/RtmpTB9vY3/rotor/mylogfile.2.log"
+#> [1] "/tmp/Rtmpw73XUg/rotor/mylogfile.1.log.zip"
+#> [2] "/tmp/Rtmpw73XUg/rotor/mylogfile.2.log"
 ```
 
 `rotate()` also backs up a file, but replaces the original file with an
@@ -93,9 +93,9 @@ empty one.
 ``` r
 rotate(tf)
 list_backups(tf)
-#> [1] "/tmp/RtmpTB9vY3/rotor/mylogfile.1.log"    
-#> [2] "/tmp/RtmpTB9vY3/rotor/mylogfile.2.log.zip"
-#> [3] "/tmp/RtmpTB9vY3/rotor/mylogfile.3.log"
+#> [1] "/tmp/Rtmpw73XUg/rotor/mylogfile.1.log"    
+#> [2] "/tmp/Rtmpw73XUg/rotor/mylogfile.2.log.zip"
+#> [3] "/tmp/Rtmpw73XUg/rotor/mylogfile.3.log"
 
 # the original file is now empty
 readLines(tf)
@@ -118,10 +118,10 @@ backup(tf, max_backups = 4)
 backup(tf, max_backups = 4)
 
 list_backups(tf)
-#> [1] "/tmp/RtmpTB9vY3/rotor/mylogfile.1.log"    
-#> [2] "/tmp/RtmpTB9vY3/rotor/mylogfile.2.log"    
-#> [3] "/tmp/RtmpTB9vY3/rotor/mylogfile.3.log"    
-#> [4] "/tmp/RtmpTB9vY3/rotor/mylogfile.4.log.zip"
+#> [1] "/tmp/Rtmpw73XUg/rotor/mylogfile.1.log"    
+#> [2] "/tmp/Rtmpw73XUg/rotor/mylogfile.2.log"    
+#> [3] "/tmp/Rtmpw73XUg/rotor/mylogfile.3.log"    
+#> [4] "/tmp/Rtmpw73XUg/rotor/mylogfile.4.log.zip"
 ```
 
 We can also use `prune_backups()` to delete old backups. Other than
@@ -141,8 +141,7 @@ datetime-stamp by default (`yyyy-mm-dd--hh-mm-ss`). The format of the
 timestamp can be modified with a subset of the formatting tokens
 understood by `strftime()` (within certain restrictions). Backups
 created with both functions are compatible with each other (but not with
-those created with
-`backup_index()`).
+those created with `backup_index()`).
 
 ``` r
 # be default backup_date() only makes a backup if the last backups is younger
@@ -155,29 +154,29 @@ backup_time(tf, format = "%Y%m%dT%H%M%S")  # ISO 8601 compatible
 
 backup_info(tf)
 #>                                                       path      name
-#> 1  /tmp/RtmpTB9vY3/rotor/mylogfile.2020-01-02_10-05-52.log mylogfile
-#> 2 /tmp/RtmpTB9vY3/rotor/mylogfile.2020-01-02--10-05-52.log mylogfile
-#> 5      /tmp/RtmpTB9vY3/rotor/mylogfile.20200102T100552.log mylogfile
-#> 3           /tmp/RtmpTB9vY3/rotor/mylogfile.2020-01-02.log mylogfile
-#> 4              /tmp/RtmpTB9vY3/rotor/mylogfile.2020-01.log mylogfile
+#> 1  /tmp/Rtmpw73XUg/rotor/mylogfile.2020-07-24_10-54-30.log mylogfile
+#> 2 /tmp/Rtmpw73XUg/rotor/mylogfile.2020-07-24--10-54-30.log mylogfile
+#> 5      /tmp/Rtmpw73XUg/rotor/mylogfile.20200724T105430.log mylogfile
+#> 3           /tmp/Rtmpw73XUg/rotor/mylogfile.2020-07-24.log mylogfile
+#> 4              /tmp/Rtmpw73XUg/rotor/mylogfile.2020-07.log mylogfile
 #>                    sfx ext size isdir mode               mtime
-#> 1  2020-01-02_10-05-52 log   26 FALSE  664 2020-01-02 10:05:52
-#> 2 2020-01-02--10-05-52 log   26 FALSE  664 2020-01-02 10:05:52
-#> 5      20200102T100552 log   26 FALSE  664 2020-01-02 10:05:52
-#> 3           2020-01-02 log   26 FALSE  664 2020-01-02 10:05:52
-#> 4              2020-01 log   26 FALSE  664 2020-01-02 10:05:52
-#>                 ctime               atime  uid  gid uname grname
-#> 1 2020-01-02 10:05:52 2020-01-02 10:05:52 1032 1032 fleck  fleck
-#> 2 2020-01-02 10:05:52 2020-01-02 10:05:52 1032 1032 fleck  fleck
-#> 5 2020-01-02 10:05:52 2020-01-02 10:05:52 1032 1032 fleck  fleck
-#> 3 2020-01-02 10:05:52 2020-01-02 10:05:52 1032 1032 fleck  fleck
-#> 4 2020-01-02 10:05:52 2020-01-02 10:05:52 1032 1032 fleck  fleck
+#> 1  2020-07-24_10-54-30 log   26 FALSE  664 2020-07-24 10:54:30
+#> 2 2020-07-24--10-54-30 log   26 FALSE  664 2020-07-24 10:54:30
+#> 5      20200724T105430 log   26 FALSE  664 2020-07-24 10:54:30
+#> 3           2020-07-24 log   26 FALSE  664 2020-07-24 10:54:30
+#> 4              2020-07 log   26 FALSE  664 2020-07-24 10:54:30
+#>                 ctime               atime   uid   gid uname grname
+#> 1 2020-07-24 10:54:30 2020-07-24 10:54:30 11861 11861 fleck  fleck
+#> 2 2020-07-24 10:54:30 2020-07-24 10:54:30 11861 11861 fleck  fleck
+#> 5 2020-07-24 10:54:30 2020-07-24 10:54:30 11861 11861 fleck  fleck
+#> 3 2020-07-24 10:54:30 2020-07-24 10:54:30 11861 11861 fleck  fleck
+#> 4 2020-07-24 10:54:30 2020-07-24 10:54:30 11861 11861 fleck  fleck
 #>             timestamp
-#> 1 2020-01-02 10:05:52
-#> 2 2020-01-02 10:05:52
-#> 5 2020-01-02 10:05:52
-#> 3 2020-01-02 00:00:00
-#> 4 2020-01-01 00:00:00
+#> 1 2020-07-24 10:54:30
+#> 2 2020-07-24 10:54:30
+#> 5 2020-07-24 10:54:30
+#> 3 2020-07-24 00:00:00
+#> 4 2020-07-01 00:00:00
 ```
 
 If we examine the “timestamp” column in the example above, we see that
@@ -202,6 +201,39 @@ prune_backups(tf, "1 year")
 prune_backups(tf, "2018-04-01")  
 ```
 
+## Cache
+
+rotor also provides a simple on-disk key-value store that can be used as
+a persistent cache.
+
+``` r
+cache <- Cache$new(file.path(tempdir(), "cache-test"), hashfun = digest::digest)
+#> creating directory '/tmp/Rtmpw73XUg/cache-test'
+key1 <- cache$push(iris)
+key2 <- cache$push(cars)
+key3 <- cache$push(mtcars)
+
+cache$files$path
+#> [1] "/tmp/Rtmpw73XUg/cache-test/d3c5d071001b61a9f6131d3004fd0988"
+#> [2] "/tmp/Rtmpw73XUg/cache-test/f98a59010652c8e1ee062ed4c43f648e"
+#> [3] "/tmp/Rtmpw73XUg/cache-test/a63c70e73b58d0823ab3bcbd3b543d6f"
+
+head(cache$read(key1))
+#>   Sepal.Length Sepal.Width Petal.Length Petal.Width Species
+#> 1          5.1         3.5          1.4         0.2  setosa
+#> 2          4.9         3.0          1.4         0.2  setosa
+#> 3          4.7         3.2          1.3         0.2  setosa
+#> 4          4.6         3.1          1.5         0.2  setosa
+#> 5          5.0         3.6          1.4         0.2  setosa
+#> 6          5.4         3.9          1.7         0.4  setosa
+
+cache$prune(max_files = 1)
+cache$files$path
+#> [1] "/tmp/Rtmpw73XUg/cache-test/a63c70e73b58d0823ab3bcbd3b543d6f"
+cache$purge()  # deletes all cached files
+cache$destroy()  # deletes the cache directory
+```
+
 # Dependencies
 
 **rotor**’s dependencies are intentionally kept slim. It only comes with
@@ -216,3 +248,14 @@ two non-base dependencies:
 
 Both packages have no transitive dependencies (i.e they do not depend on
 anything outside of base R)
+
+Optional dependencies:
+
+  - [digest](https://github.com/eddelbuettel/digest) or
+    [uuid](https://CRAN.R-project.org/package=uuid) for generating
+    hashes or UIDs when using Cache. Storage keys for cache files can
+    also be set manually, in which case no external dependencies are
+    required.
+  - [zip](https://CRAN.R-project.org/package=zip) is supported as an
+    alternative to the integrated zip function in R. Might work better
+    on some systems and worse on others.

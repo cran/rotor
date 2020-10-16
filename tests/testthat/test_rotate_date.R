@@ -140,15 +140,15 @@ test_that("backup_date works as expected for years", {
   file.create(file.path(td, "test.2019-12-31.log"))
   bu <- backup_date(tf, "1 year", now = "2019-01-01")
   bu <- backup_date(tf, "1 year", now = "2019-12-31")
-  expect_identical(bq$n_backups, 1L)
+  expect_identical(bq$n, 1L)
   bq$prune(0)
 
   # rotate because backup is from last year
   file.create(file.path(td, "test.2018-12-31.log"))
   bu <- backup_date(tf, "2 year", now = "2019-12-31")  # dont rotate
-  expect_identical(bq$n_backups, 1L)
+  expect_identical(bq$n, 1L)
   bu <- backup_date(tf, "1 year", now = "2019-12-31")  # rotate
-  expect_true(length(bq$backups$path) == 2)
+  expect_true(length(bq$files$path) == 2)
 
   bq$prune(0)
   unlink(tf)
@@ -167,23 +167,23 @@ test_that("backup_date works as expected for quarters", {
   # no backup younger than 1 quarter exists, so rotate
   bu <- backup_date(tf, age = 0)
   expect_true(file.size(bu) > 1)
-  expect_identical(bq$n_backups, 1L)
+  expect_identical(bq$n, 1L)
   bq$prune(0)
 
   # no backup because last backup is less than a quarter old
   file.create(file.path(td, "test.2019-06-21.log"))
   bu <- backup_date(tf, "1 quarter", now = "2019-04-01")
-  expect_identical(bq$n_backups, 1L)
+  expect_identical(bq$n, 1L)
   bq$prune(0)
 
   # no backup because last backup is less than 2 quarter old
   file.create(file.path(td, "test.2019-01-01.log"))
   bu <- backup_date(tf, "2 quarter", now = "2019-04-01")
-  expect_identical(bq$n_backups, 1L)
+  expect_identical(bq$n, 1L)
 
   # backup because last backup is more than 1 quarter old
   bu <- backup_date(tf, "1 quarter", now = "2019-04-01")
-  expect_true(length(bq$backups$path) == 2)
+  expect_true(length(bq$files$path) == 2)
 
   bq$prune(0)
 })
@@ -200,23 +200,23 @@ test_that("backup_date works as expected for months", {
   # no backup younger than 1 month exists, so rotate
   bu <- backup_date(tf, -1)
   expect_true(file.size(bu) > 1)
-  expect_identical(bq$n_backups, 1L)
+  expect_identical(bq$n, 1L)
   bq$prune(0)
 
   # no backup because last backup is less than a month old
   file.create(file.path(td, "test.2019-05-21.log"))
   bu <- backup_date(tf, "1 month", now = "2019-05-02")
-  expect_identical(bq$n_backups, 1L)
+  expect_identical(bq$n, 1L)
   bq$prune(0)
 
   # no backup because last backup is less than 2 month old
   file.create(file.path(td, "test.2019-04-21.log"))
   bu <- backup_date(tf, "2 month", now = "2019-05-02")
-  expect_identical(bq$n_backups, 1L)
+  expect_identical(bq$n, 1L)
 
   # backup because last backup is more than 1 month old
   bu <- backup_date(tf, "1 month", now = "2019-05-02")
-  expect_true(length(bq$backups$path) == 2)
+  expect_true(length(bq$files$path) == 2)
 
   bq$prune(0)
 })
@@ -233,24 +233,24 @@ test_that("backup_date works as expected for weeks", {
   # no backup younger than 1 week exists, so rotate
   bu <- backup_date(tf, -1)
   expect_true(file.size(bu) > 1)
-  expect_identical(bq$n_backups, 1L)
+  expect_identical(bq$n, 1L)
   bq$prune(0)
 
 
   # no backup because last backup is less than a week old
   file.create(file.path(td, "test.2019-01-28.log"))
   bu <- backup_date(tf, "1 week", now = "2019-01-30")
-  expect_identical(bq$n_backups, 1L)
+  expect_identical(bq$n, 1L)
   bq$prune(0)
 
   # no backup because last backup is less than 2 week old
   file.create(file.path(td, "test.2019-01-27.log"))
   bu <- backup_date(tf, "2 week", now = "2019-01-30")
-  expect_identical(bq$n_backups, 1L)
+  expect_identical(bq$n, 1L)
 
   # backup because last backup is more than 1 week old
   bu <- backup_date(tf, "1 week", now = "2019-01-30")
-  expect_true(length(bq$backups$path) == 2)
+  expect_true(length(bq$files$path) == 2)
 
   bq$prune(0)
 })
@@ -350,16 +350,16 @@ test_that("backup/rotate_time works to different directory", {
   file.create(tf)
   writeLines("foobar", tf)
 
-  backup_time(tf, backup_dir = bu_dir, now = as.Date("2019-01-01"), age = "-99999 years")
+  backup_time(tf, dir = bu_dir, now = as.Date("2019-01-01"), age = "-99999 years")
 
   expect_identical(
     readLines(tf),
     readLines(file.path(dirname(tf), "backups", "test.2019-01-01--00-00-00.log"))
   )
 
-  expect_identical(n_backups(tf, backup_dir = bu_dir), 1L)
-  prune_backups(tf, 0, backup_dir = bu_dir)
-  expect_identical(n_backups(tf, backup_dir = bu_dir), 0L)
+  expect_identical(n_backups(tf, dir = bu_dir), 1L)
+  prune_backups(tf, 0, dir = bu_dir)
+  expect_identical(n_backups(tf, dir = bu_dir), 0L)
   expect_length(list.files(bu_dir), 0)
 })
 
@@ -375,16 +375,16 @@ test_that("backup/rotate_time works with custom format", {
   file.create(tf)
   writeLines("foobar", tf)
 
-  backup_time(tf, backup_dir = bu_dir, now = as.Date("2019-01-01"), format = "%Y-%m", age = "-99999 years")
+  backup_time(tf, dir = bu_dir, now = as.Date("2019-01-01"), format = "%Y-%m", age = "-99999 years")
 
   expect_identical(
     readLines(tf),
     readLines(file.path(dirname(tf), "backups", "test.2019-01.log"))
   )
 
-  expect_identical(n_backups(tf, backup_dir = bu_dir), 1L)
-  prune_backups(tf, 0, backup_dir = bu_dir)
-  expect_identical(n_backups(tf, backup_dir = bu_dir), 0L)
+  expect_identical(n_backups(tf, dir = bu_dir), 1L)
+  prune_backups(tf, 0, dir = bu_dir)
+  expect_identical(n_backups(tf, dir = bu_dir), 0L)
   expect_length(list.files(bu_dir), 0)
 })
 

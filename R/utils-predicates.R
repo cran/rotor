@@ -1,9 +1,9 @@
 
 is_pure_BackupQueueIndex <- function(
   file,
-  backup_dir = dirname(file)
+  dir = dirname(file)
 ){
-  identical(BackupQueueDateTime$new(file, backup_dir = backup_dir)$n_backups, 0L)
+  identical(BackupQueueDateTime$new(file, dir = dir)$n, 0L)
 }
 
 
@@ -11,10 +11,10 @@ is_pure_BackupQueueIndex <- function(
 
 is_pure_BackupQueueDateTime <- function(
   file,
-  backup_dir = dirname(file)
+  dir = dirname(file)
 ){
-  bi <- BackupQueueIndex$new(file, backup_dir = backup_dir)
-  identical(bi$n_backups, 0L) || min(bi$backups$index) > 1L
+  bi <- BackupQueueIndex$new(file, dir = dir)
+  identical(bi$n, 0L) || min(bi$files$index) > 1L
 }
 
 
@@ -22,17 +22,17 @@ is_pure_BackupQueueDateTime <- function(
 
 is_pure_BackupQueue <- function(
   file,
-  backup_dir = dirname(file)
+  dir = dirname(file)
 ){
-  bi <- BackupQueueIndex$new(file, backup_dir = backup_dir)
+  bi <- BackupQueueIndex$new(file, dir = dir)
 
-  if (bi$n_backups < 1){
+  if (bi$n < 1){
     TRUE
-  } else if (identical(min(bi$backups$index), 1L)){
+  } else if (identical(min(bi$files$index), 1L)){
     # check if min index is 1 to filter out BackupQueueIndex that are truely
     # BackupQueueDate but only have integer like timestamps
     identical(
-      try(BackupQueueDateTime$new(file, backup_dir = backup_dir)$n_backups, silent = TRUE),
+      try(BackupQueueDateTime$new(file, dir = dir)$n, silent = TRUE),
       0L
     )
   } else {
@@ -45,10 +45,10 @@ is_pure_BackupQueue <- function(
 
 assert_pure_BackupQueue <- function(
   file,
-  backup_dir = dirname(file),
+  dir = dirname(file),
   warn_only = FALSE
 ){
-  if (is_pure_BackupQueue(file, backup_dir = backup_dir))
+  if (is_pure_BackupQueue(file, dir = dir))
     return(TRUE)
 
   msg <- paste0(
@@ -69,8 +69,8 @@ assert_pure_BackupQueue <- function(
 
 is_parsable_rotation_interval <- function(x){
   is_scalar(x) && (
-    is_integerish(x) ||
     is.infinite(x) ||
+    is_integerish(x) ||
     grepl("\\d+\\syear|quarter|month|week|day", x)
   )
 }

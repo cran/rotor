@@ -1,3 +1,20 @@
+# rotor 0.3.0
+
+* Improved some error messages
+* Added `rotate_rds()`, `rotate_rds_time()`, and `rotate_rds_date()` as a
+  replacement for `base::saveRDS()` that supports creating backups instead of
+  just overwriting the destination file.
+* added `Cache`, an R6 class for managing cache directories. The `Cache` API
+  is still experimental and might change.
+* **breaking** R6 API: renamed some methods and active fields of BackupQueue to
+  more universal names:
+   - `$push_backup()` -> `$push()`
+   - `$backup_dir` -> `dir()`
+   - `$backups` -> `$files`
+   - `$file` -> `$origin`
+* `BackupQueue$prune_identical()` removes identical backups for a BackupQueue
+   
+  
 # rotor 0.2.4
 
 * Fixes unit tests sensitive to year change.
