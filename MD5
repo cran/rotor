@@ -1,9 +1,9 @@
-fc205937bd1f18f2087cdc1b8c45569a *DESCRIPTION
+582d3bf127617186b201b38dc20f6b21 *DESCRIPTION
 9a58584a9894de1a57041e8a82705789 *LICENSE
 ad3115b478d10506d58b9039716a1062 *NAMESPACE
-80818cb52bbe2e784f861e73b2ac918e *NEWS.md
+44ce397988f88e728f2de75d127fe3f1 *NEWS.md
 ef8a6910486f621aab82dbeac947cd40 *R/BackupQueue.R
-bf4d6531cb4593e2c7617374d5a8930f *R/Cache.R
+62f818999308104a6f928b9fb6d665ab *R/Cache.R
 94e1cc9c7172e36c8368a3d108657cb2 *R/DirectoryQueue.R
 3a02d0308c37acf465d0694422fd87c6 *R/DryRunMemory.R
 6b0caf3c7530259d3e10c0f198a2ca14 *R/conditions.R
@@ -28,7 +28,7 @@ a78d236dec72641dcfa4f565f5db1979 *man/BackupQueue.Rd
 dd682ab025a9fb0ab98aa058e76d7f7a *man/BackupQueueDate.Rd
 4272a6aaf4139cdab478a114a1bf9d8a *man/BackupQueueDateTime.Rd
 1533e85e37f222fad516a7491e2d30b3 *man/BackupQueueIndex.Rd
-cf242f17b15b5c5ff050e61441e35fce *man/Cache.Rd
+205a3bba7ee1b70343c68ced0a9ec743 *man/Cache.Rd
 82b89a60eea0bfd65bc9f9decdaa5347 *man/DirectoryQueue.Rd
 1ebbd9759c9d6fac66279d2df1efae09 *man/backup_info.Rd
 32c60b234fa0c409c1476018981c261a *man/rotate.Rd
@@ -36,7 +36,7 @@ cf242f17b15b5c5ff050e61441e35fce *man/Cache.Rd
 ed3ffa8ab68b5d6a3ab02104579e3850 *man/rotor-package.Rd
 7bf4a1855ee05ec447485a13134b1d31 *tests/testthat.R
 3d87b162ae8ecc7296c8eb68cc0a7fdf *tests/testthat/test_BackupQueue.R
-1653b8dc572489862f63ba083173528d *tests/testthat/test_Cache.R
+fbc228fac48b66e9b7cec3e8ba0c21f3 *tests/testthat/test_Cache.R
 8ac4fd131a05979a4b89d12a2d774ca7 *tests/testthat/test_copy_or_compress.R
 1c2286e2b578e7a17769d7df83d5b4f0 *tests/testthat/test_list_backups.R
 43f2ce8e369c9159c42f557b2cb9a570 *tests/testthat/test_parsers.R

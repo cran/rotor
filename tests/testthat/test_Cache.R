@@ -4,13 +4,12 @@ context("Cache")
 # generate lexically sortable ids. For equal timestamp, Cache$files is sorted
 # by id, so that the tests do not fail on file systems with low-accuracy
 # timestamps
-
-
 .id_cache <- new.env()
 assign("id", 0L, .id_cache)
 ascending_id <- function(){
   x <- get("id", .id_cache)
-  x <- as.character(as.integer(x) + 1L)
+  x <- pad_left(as.integer(x) + 1L, width = 8, pad = "0")
+  assert(identical(nchar(x), 8L))
   assign("id", x, .id_cache)
   x
 }
@@ -61,14 +60,14 @@ test_that("setting hash functions work", {
   expect_identical(cache_hash$n, 0L)
 
 
-  # To override this behaviour use a generate for unique ids, such as
+  # To override this behaviour use a function that generates globally unique ids instead of hashes
   cache_uid <- Cache$new(td, hashfun = function(x) ascending_id())
   cache_uid$push(iris)
   cache_uid$push(iris)
   expect_identical(cache_hash$n, 2L)
   cache_hash$purge()
 
-  # ensure hashfun allways returns a scalar
+  # fail if hashfun does not returns a scalar
   cache_err <- Cache$new(td, hashfun = function(x) c(ascending_id(),  ascending_id()))
   expect_error(cache_err$push(iris), class = "ValueError")
 })
@@ -86,6 +85,33 @@ test_that("pruning works by number of files works", {
   k2 <- cache$push(letters)
   k3 <- cache$push(cars)
   expect_identical(cache$n, 3L)
+
+  # cached files are sorted in the order of their creation
+  expect_identical(cache$files$key[[1]], k1)
+  expect_identical(cache$files$key[[2]], k2)
+  expect_identical(cache$files$key[[3]], k3)
+
+  cache$prune(max_files = 2)
+  expect_identical(cache$read(cache$files$key[[1]]), letters)
+  expect_identical(cache$read(cache$files$key[[2]]), cars)
+  cache$purge()
+})
+
+
+
+test_that("$files is ordered by key if timestamps are identical", {
+  td <- file.path(tempdir(), "cache-test")
+  on.exit(unlink(td, recursive = TRUE))
+
+  cache <- Cache$new(td, hashfun = function(x) ascending_id())
+  k1 <- cache$push(iris)
+  k2 <- cache$push(letters)
+  k3 <- cache$push(cars)
+  expect_identical(cache$n, 3L)
+
+  for (p in cache$files$path){  # loop necessary for compat with R < 3.6.0
+    Sys.setFileTime(p, "1999-01-01 00:00:00")
+  }
 
   expect_identical(cache$files$key[[1]], k1)
   expect_identical(cache$files$key[[2]], k2)

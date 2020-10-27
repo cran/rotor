@@ -123,6 +123,19 @@ Cache <- R6::R6Class(
     },
 
     #' @description Prune the cache
+    #'
+    #' Delete cached objects that match certain criteria. `max_files` and
+    #' `max_size` deletes the oldest cached objects first; however, this is
+    #' dependent on accuracy of the file modification timestamps on your system.
+    #' For example, ext3 only supports second-accuracy, and some windows
+    #' version only support timestamps at a resolution of two seconds.
+    #'
+    #' If two files have the same timestamp, they are deleted in the lexical
+    #' sort order of their key. This means that by using a function that
+    #' generates lexically sortable keys as `hashfun` (such as
+    #' [ulid::generate()]) you can enforce the correct deletion order. There
+    #' is no such workaround if you use a real hash function.
+    #'
     #' @param max_files,max_size,max_age see section Active Bindings.
     #' @param now a `POSIXct` datetime scalar. The current time (for max_age)
     prune = function(

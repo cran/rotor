@@ -1,7 +1,7 @@
 Type: Package
 Package: rotor
 Title: Log Rotation and Conditional Backups
-Version: 0.3.2
+Version: 0.3.3
 Authors@R: 
     person(given = "Stefan",
            family = "Fleck",
@@ -17,12 +17,12 @@ URL: https://s-fleck.github.io/rotor/
 BugReports: https://github.com/s-fleck/rotor/issues
 Imports: dint, R6, tools
 Suggests: covr, crayon, data.table, digest, rmarkdown, testthat, uuid,
-        zip
+        ulid, zip
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.1.9000
 NeedsCompilation: no
-Packaged: 2020-10-20 13:24:59 UTC; fleck
+Packaged: 2020-10-27 07:12:32 UTC; hoelk
 Author: Stefan Fleck [aut, cre] (<https://orcid.org/0000-0003-3344-9851>)
 Repository: CRAN
-Date/Publication: 2020-10-20 14:40:07 UTC
+Date/Publication: 2020-10-27 07:30:02 UTC
