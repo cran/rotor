@@ -1,9 +1,9 @@
-582d3bf127617186b201b38dc20f6b21 *DESCRIPTION
+1dde11cddd734b9ad95990d614be2e2e *DESCRIPTION
 9a58584a9894de1a57041e8a82705789 *LICENSE
 ad3115b478d10506d58b9039716a1062 *NAMESPACE
-44ce397988f88e728f2de75d127fe3f1 *NEWS.md
+649607bd7e95c2ca8b09b3b72eab9918 *NEWS.md
 ef8a6910486f621aab82dbeac947cd40 *R/BackupQueue.R
-62f818999308104a6f928b9fb6d665ab *R/Cache.R
+f9a5f23d912c7dffab8e6bfb66f56bbd *R/Cache.R
 94e1cc9c7172e36c8368a3d108657cb2 *R/DirectoryQueue.R
 3a02d0308c37acf465d0694422fd87c6 *R/DryRunMemory.R
 6b0caf3c7530259d3e10c0f198a2ca14 *R/conditions.R
@@ -35,8 +35,8 @@ dd682ab025a9fb0ab98aa058e76d7f7a *man/BackupQueueDate.Rd
 12d18fc176717cd0c73431b2fb14b682 *man/rotate_rds.Rd
 ed3ffa8ab68b5d6a3ab02104579e3850 *man/rotor-package.Rd
 7bf4a1855ee05ec447485a13134b1d31 *tests/testthat.R
-3d87b162ae8ecc7296c8eb68cc0a7fdf *tests/testthat/test_BackupQueue.R
-fbc228fac48b66e9b7cec3e8ba0c21f3 *tests/testthat/test_Cache.R
+f129be7e1ac7bc513e216e3a95f634fa *tests/testthat/test_BackupQueue.R
+05d42dc45897b5fcb0363c78d70a0cf5 *tests/testthat/test_Cache.R
 8ac4fd131a05979a4b89d12a2d774ca7 *tests/testthat/test_copy_or_compress.R
 1c2286e2b578e7a17769d7df83d5b4f0 *tests/testthat/test_list_backups.R
 43f2ce8e369c9159c42f557b2cb9a570 *tests/testthat/test_parsers.R
