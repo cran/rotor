@@ -29,7 +29,7 @@ file_copy <- function(
     return(DRY_RUN$create(to))
   }
 
-  file.copy(from, to, ...)
+  file.copy(from, to, ..., copy.date = TRUE)
 }
 
 
@@ -208,6 +208,13 @@ msg_file_create <- function(
 
 
 
+#' Check whether further prunign checks are necessary (you still have to check for max_backups downstream!)
+#'
+#' @param obj
+#' @param max_backups
+#' @noRd
+#'
+#' @return logical scalar
 should_prune <- function(
   obj,
   max_backups

@@ -1,13 +1,17 @@
+# rotor 0.3.5
+
+* Backups now retain their original timestamp (created, last modified) where
+  possible (even when zipped)
+* fixed broken behaviour when pruning with max_backups where max_backups is
+  the maximum number of files
+* `parse_size()` now accepts (and rounds down) decimal file sizes, but throws
+  a warning
+  
 # rotor 0.3.4
-
-* Further fixes for the issue mentioned in 0.3.3
-
-# rotor 0.3.3
 
 * Hotfix for some tests related to the `Cache` R6 class that fail on systems
   with low-precision file system timestamps (such as ext3 and old Windows
   file systems)
-
 
 # rotor 0.3.2
 
