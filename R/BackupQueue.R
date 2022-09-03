@@ -99,7 +99,14 @@ BackupQueue <- R6::R6Class(
           dd,
           c(paste(nrow(dd), "files total"), sum(as.integer(dd[, "size"])))
         )
-        dd[, "size"] <- pad_left(fmt_bytes(dd[, "size"]))
+
+        if (DRY_RUN$active){
+          dd[, "size"] <- pad_left(fmt_bytes(dd[, "size"], na = "<dry run>"))
+        } else {
+          dd[, "size"] <- pad_left(fmt_bytes(dd[, "size"]))
+        }
+
+
         dd[, "file"] <- pad_right(dd[, "file"])
         assert(nrow(dd) >= 3)
         sel <- 2:(nrow(dd) - 1)
@@ -292,7 +299,7 @@ BackupQueueIndex <- R6::R6Class(
           tools::file_path_sans_ext(basename(self$origin))
         )
         ext  <- tools::file_ext(self$origin)
-        sfx <- "1"
+        sfx <- "1"  # the new file will always have the 1 suffix, the old ones are incremented
         if (is_blank(ext)) {
           name_new <- paste(name, sfx, sep = ".")
         } else {
@@ -837,7 +844,7 @@ filenames_as_matrix <- function(
   back_names <- basename(backups)
 
   filename_end <-
-    attr(gregexpr(file_name, back_names[[1]])[[1]], "match.length") + 1L
+    attr(gregexpr(file_name, back_names[[1]], fixed = TRUE)[[1]], "match.length") + 1L
 
   a <- strsplit_at_seperator_pos(back_names, filename_end)
   assert(
@@ -876,7 +883,7 @@ get_backups <- function(
   if (!length(potential_backups))
     return(character())
 
-  sfx_patterns <- paste0("(", sfx_patterns, ")", collapse = "|")
+  sfx_patterns <- paste0("(\\.", sfx_patterns, ")", collapse = "|")
 
   file_dir  <- dirname(origin)
   file_name <- basename(tools::file_path_sans_ext(origin))
@@ -890,7 +897,9 @@ get_backups <- function(
   )
   back_names <- basename(potential_backups)
 
-  sel <- grepl(paste0("^", file_name), back_names)
+  sel <- grepl(paste0(file_name, "."), back_names, fixed = TRUE)
+  sel[regexpr(file_name, back_names, fixed = TRUE) != 1] <- FALSE
+
   backups    <- potential_backups[sel]
   back_names <- basename(backups)
 

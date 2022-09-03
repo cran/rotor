@@ -143,6 +143,28 @@ test_that("BackupQueue finding backups works as expected for files without exten
 
 
 
+test_that("BackupQueue finding backups works on files with regex characters", {
+  dir.create(td, recursive = TRUE)
+  on.exit(unlink(td, recursive = TRUE))
+
+  tf <- file.path(td, "test+-[(")
+  file.create(tf)
+
+  expect_identical(n_backups(tf), 0L)
+  bq <- BackupQueue$new(tf)
+
+  sfxs <-c(1:12, "2019-12-31")
+  bus <- paste0(tools::file_path_sans_ext(tf), ".", sfxs)
+  file.create(bus)
+
+  expect_path_setequal(bq$files$path, bus)
+  expect_setequal(bq$files$sfx, sfxs)
+  expect_setequal(bq$files$ext, "")
+})
+
+
+
+
 test_that("dryrun/verbose prune", {
   dir.create(td, recursive = TRUE)
   on.exit(unlink(td, recursive = TRUE))
@@ -456,7 +478,7 @@ test_that("BackupQueueIndex$push() can push to different directory", {
 
 
 
-test_that("BackupQueueIndex dry run doesnt modify file system", {
+test_that("BackupQueueIndex dry run does not modify file system", {
   try({unlink(td, recursive = TRUE)})
   dir.create(td, recursive = TRUE)
   on.exit(unlink(td, recursive = TRUE))
@@ -483,7 +505,7 @@ test_that("BackupQueueIndex dry run doesnt modify file system", {
   expect_silent(bt$pad_index())
   expect_snapshot_unchanged(snap)
 
-  expect_message(bt$push(), "test.log -> test.1.log")
+  expect_message(bt$push(), ".*test.log -> .*test.1.log")
   expect_snapshot_unchanged(snap)
 
   expect_message(bt$prune(0), "test.01.log")
