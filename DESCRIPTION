@@ -1,7 +1,7 @@
 Type: Package
 Package: rotor
 Title: Log Rotation and Conditional Backups
-Version: 0.3.6
+Version: 0.3.7
 Authors@R: 
     person(given = "Stefan",
            family = "Fleck",
@@ -21,7 +21,7 @@ Suggests: covr, crayon, data.table, digest, rmarkdown, testthat, uuid,
 Encoding: UTF-8
 RoxygenNote: 7.2.1.9000
 NeedsCompilation: no
-Packaged: 2022-09-03 20:09:07 UTC; stefan.fleck
+Packaged: 2022-10-11 12:35:11 UTC; stefan.fleck
 Author: Stefan Fleck [aut, cre] (<https://orcid.org/0000-0003-3344-9851>)
 Repository: CRAN
-Date/Publication: 2022-09-03 21:40:05 UTC
+Date/Publication: 2022-10-11 13:10:02 UTC
